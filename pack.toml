@@ -1,0 +1,4 @@
+[package]
+name = "FinSc-Multiset-Core"
+version = "0.3.3"
+ipkg = "FinSc-Multiset-Core.ipkg"

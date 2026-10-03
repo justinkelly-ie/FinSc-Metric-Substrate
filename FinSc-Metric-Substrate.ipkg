@@ -1,0 +1,35 @@
+package FinSc-Metric-Substrate
+version = 0.4.0
+authors = "Justin Kelly"
+brief   = "Layer 0b Metric Spacetime Substrate, 4 Geometries, & Spatial Stencils"
+
+depends = FinSc-Multiset, base, linear
+sourcedir = "src"
+
+modules = MetricSubstrate,
+          Core,
+          Stage0.Pixel,
+          Stage0.Spread,
+          Stage0.WitnessLedger,
+          Stage0.UniverseState,
+          Stage0.DepMaxel,
+          Stage0.Vexel.Byte,
+          Stage0.Vexel.DepVexel,
+          Stage0.Vexel.Transformation,
+          Stage0.Vexel.Vexel,
+          Stage0.Singleton.SBFMset,
+          Stage0.Singleton.SingFraction,
+
+          Stage1.UnixelFraction,
+          Stage1.VexelMaxel,
+          Stage1.FourGeometries,
+          Stage1.MetricSignature,
+          Stage1.SpatialStencil,
+          Stage1.QuadStream,
+          Stage1.Topology.Boundaries,
+          Stage1.Topology.Peaks,
+          Stage1.Topology.PersistenceStream,
+          Stage1.PhysicalUniverse.Stratification,
+          Stage1.SubstrateRepIso,
+
+          Reflect.SubstrateAuditor
