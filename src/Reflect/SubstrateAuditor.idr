@@ -6,6 +6,7 @@ import Stage0.OnSeq.FusedStream
 import Stage1.Order.Preorder
 import Stage1.FourGeometries
 import Stage1.MetricSignature
+import Stage1.VexelMaxel
 import Language.Reflection
 
 %default total
@@ -206,6 +207,8 @@ substrateAuditorWitnesses =
   , holographicAreaBoundProof 3
   , auditHelmholtzGroundStateProof
   , auditLinearCarrierPreservationProof
+  , auditChromogeometricMetricSupportsProof
+  , auditMatrixPathCompositionProof
   ]
 
 

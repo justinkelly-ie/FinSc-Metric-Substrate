@@ -47,3 +47,31 @@ streamToBoxelBoxNat : BoxNat -> FS.FusedStream (VM.Voxel, BoxInt) -> VM.Boxel
 streamToBoxelBoxNat fuel strm =
   let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, (v, w) => insertItemBox v w acc) ZeroM strm
   in VM.multisetToBoxel m
+
+------------------------------------------------------------------------
+-- WILDBERGER SUPPORT STREAM EXTRACTORS (RULE 04 SECTION 8)
+------------------------------------------------------------------------
+
+||| Deforested zero-allocation stream extractor for the active support of a Maxel stream.
+||| Emits strictly non-zero directed coordinate cells without intermediate list allocations (Rule 04).
+public export
+supportMaxelStream : FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream VM.Pixel
+supportMaxelStream =
+  FS.filterMapStream (\(px, w) => if unwrapBox w /= 0 then Just px else Nothing)
+
+||| Deforested zero-allocation stream extractor for the active support of a Vexel stream.
+||| Emits strictly non-zero basis Unixels without intermediate list allocations.
+public export
+supportVexelStream : FS.FusedStream (VM.Unixel, BoxInt) -> FS.FusedStream VM.Unixel
+supportVexelStream =
+  FS.filterMapStream (\(u, w) => if unwrapBox w /= 0 then Just u else Nothing)
+
+||| Deforested zero-allocation stream extractor for the active support of a Boxel stream.
+public export
+supportBoxelStream : FS.FusedStream (VM.Voxel, BoxInt) -> FS.FusedStream VM.Voxel
+supportBoxelStream =
+  FS.filterMapStream (\(vx, w) => if unwrapBox w /= 0 then Just vx else Nothing)
+
+
+
+

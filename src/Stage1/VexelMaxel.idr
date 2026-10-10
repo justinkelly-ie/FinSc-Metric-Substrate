@@ -449,6 +449,85 @@ identityMaxel =
           , (MkPixel 3 3, intToBoxInt 1)
           ]
 
+------------------------------------------------------------------------
+-- WILDBERGER SUPPORT & GRAPH INCIDENCE OPERATIONS
+------------------------------------------------------------------------
+
+||| Extracts the finite active support of a Maxel as a list of directed edges [i, j].
+||| In Wildberger's Wild Linear Algebra, a matrix is a weighted directed graph,
+||| and its support Supp(M) = { [i, j] | a_ij /= 0 } is the network topology.
+public export
+supportMaxel : Maxel -> List Pixel
+supportMaxel (MkMaxel pxs) =
+  map fst (filter (\(_, w) => unwrapBox w /= 0) pxs)
+
+||| Extracts the finite active support of a Vexel vector as a list of basis Unixels.
+public export
+supportVexel : Vexel -> List Unixel
+supportVexel (MkVexel sings) =
+  map fst (filter (\(_, w) => unwrapBox w /= 0) sings)
+
+------------------------------------------------------------------------
+-- CHROMOGEOMETRIC METRIC MAXELS & SUPPORT FINGERPRINTS
+------------------------------------------------------------------------
+
+||| 2D Blue (Elliptic/Euclidean) Metric Maxel: [1, 1] + [2, 2] (pure diagonal self-loops).
+public export
+blueMetricMaxel2D : Maxel
+blueMetricMaxel2D =
+  MkMaxel [ (MkPixel 1 1, intToBoxInt 1)
+          , (MkPixel 2 2, intToBoxInt 1)
+          ]
+
+||| 2D Red (Hyperbolic/Relativistic) Metric Maxel: [1, 1] - [2, 2] (signed diagonal self-loops).
+public export
+redMetricMaxel2D : Maxel
+redMetricMaxel2D =
+  MkMaxel [ (MkPixel 1 1, intToBoxInt 1)
+          , (MkPixel 2 2, intToBoxInt (-1))
+          ]
+
+||| 2D Green (Parabolic/Null) Metric Maxel: [1, 2] + [2, 1] (pure off-diagonal bipartite cross-edges).
+public export
+greenMetricMaxel2D : Maxel
+greenMetricMaxel2D =
+  MkMaxel [ (MkPixel 1 2, intToBoxInt 1)
+          , (MkPixel 2 1, intToBoxInt 1)
+          ]
+
+||| Invariant audit verifying the Chromogeometric Metric Support Fingerprints:
+||| - Blue: Supp = {[1, 1], [2, 2]}
+||| - Red:  Supp = {[1, 1], [2, 2]}
+||| - Green: Supp = {[1, 2], [2, 1]} (Zero self-loops, pure off-diagonal)
+public export
+auditChromogeometricMetricSupportsProof : Bool
+auditChromogeometricMetricSupportsProof =
+  let sBlue  = supportMaxel blueMetricMaxel2D
+      sRed   = supportMaxel redMetricMaxel2D
+      sGreen = supportMaxel greenMetricMaxel2D
+      tBlue  = sBlue  == [MkPixel 1 1, MkPixel 2 2]
+      tRed   = sRed   == [MkPixel 1 1, MkPixel 2 2]
+      tGreen = sGreen == [MkPixel 1 2, MkPixel 2 1]
+  in tBlue && tRed && tGreen
+
+||| Invariant audit verifying Wildberger matrix multiplication as 2-step path composition:
+||| Multiplying Green * Green:
+|||   ([1, 2] + [2, 1]) * ([1, 2] + [2, 1])
+||| Paths:
+|||   1 -> 2 -> 1 gives [1, 1] (weight 1)
+|||   2 -> 1 -> 2 gives [2, 2] (weight 1)
+||| Product = [1, 1] + [2, 2] = Blue Metric!
+||| Green^2 = Blue (the chromogeometric reflection identity g_Green^2 = I)!
+public export
+auditMatrixPathCompositionProof : Bool
+auditMatrixPathCompositionProof =
+  let gG = greenMetricMaxel2D
+      gProd = mulMaxel gG gG
+      sProd = supportMaxel gProd
+      e11 = lookupPixel (MkPixel 1 1) gProd
+      e22 = lookupPixel (MkPixel 2 2) gProd
+  in sProd == [MkPixel 1 1, MkPixel 2 2] && unwrapBox e11 == 1 && unwrapBox e22 == 1
+
 ||| Adds two Maxels by concatenating their pixel multiset entries.
 public export
 addMaxel : Maxel -> Maxel -> Maxel
