@@ -471,29 +471,82 @@ supportVexel (MkVexel sings) =
 -- CHROMOGEOMETRIC METRIC MAXELS & SUPPORT FINGERPRINTS
 ------------------------------------------------------------------------
 
+||| 2D Blue (Elliptic/Euclidean) Metric Maxel parameterized by (x, y):
+||| x^2 [1, 1] + y^2 [2, 2] (pure diagonal self-loops).
+public export
+parameterizedBlueMetricMaxel : BoxInt -> BoxInt -> Maxel
+parameterizedBlueMetricMaxel x y =
+  MkMaxel [ (MkPixel 1 1, x * x)
+          , (MkPixel 2 2, y * y)
+          ]
+
+||| 2D Red (Hyperbolic/Relativistic) Metric Maxel parameterized by (x, y):
+||| x^2 [1, 1] - y^2 [2, 2] (signed diagonal self-loops).
+public export
+parameterizedRedMetricMaxel : BoxInt -> BoxInt -> Maxel
+parameterizedRedMetricMaxel x y =
+  MkMaxel [ (MkPixel 1 1, x * x)
+          , (MkPixel 2 2, mulBox (intToBoxInt (-1)) (y * y))
+          ]
+
+||| 2D Green (Parabolic/Null) Metric Maxel parameterized by (x, y):
+||| xy [1, 2] + xy [2, 1] (pure off-diagonal bipartite cross-edges).
+public export
+parameterizedGreenMetricMaxel : BoxInt -> BoxInt -> Maxel
+parameterizedGreenMetricMaxel x y =
+  let xy = x * y
+  in MkMaxel [ (MkPixel 1 2, xy)
+             , (MkPixel 2 1, xy)
+             ]
+
+||| Adds two Maxels by concatenating their pixel multiset entries.
+public export
+addMaxel : Maxel -> Maxel -> Maxel
+addMaxel (MkMaxel ps1) (MkMaxel ps2) = MkMaxel (ps1 ++ ps2)
+
+||| Scales a Maxel by a BoxInt scalar.
+public export
+scaleMaxel : BoxInt -> Maxel -> Maxel
+scaleMaxel s (MkMaxel ps) =
+  MkMaxel (map (\(p, w) => (p, s * w)) ps)
+
+||| Invariant audit verifying the parameterized chromogeometric operator identity:
+||| g_Red^2 + g_Green^2 == Q_Blue * g_Blue
+||| for arbitrary non-zero integer coordinates (x, y).
+public export
+auditParameterizedMetricOperatorIdentity : (x : BoxInt) -> (y : BoxInt) -> Bool
+auditParameterizedMetricOperatorIdentity x y =
+  let gB = parameterizedBlueMetricMaxel x y
+      gR = parameterizedRedMetricMaxel x y
+      gG = parameterizedGreenMetricMaxel x y
+      gR2 = mulMaxel gR gR
+      gG2 = mulMaxel gG gG
+      lhsSum = addMaxel gR2 gG2
+      qBlue = (x * x) + (y * y)
+      rhsExpected = scaleMaxel qBlue gB
+      lhs11 = lookupPixel (MkPixel 1 1) lhsSum
+      rhs11 = lookupPixel (MkPixel 1 1) rhsExpected
+      lhs22 = lookupPixel (MkPixel 2 2) lhsSum
+      rhs22 = lookupPixel (MkPixel 2 2) rhsExpected
+  in boxEq lhs11 rhs11 && boxEq lhs22 rhs22
+
 ||| 2D Blue (Elliptic/Euclidean) Metric Maxel: [1, 1] + [2, 2] (pure diagonal self-loops).
+||| Deprecated: Prefer `parameterizedBlueMetricMaxel` for dynamic coordinates.
 public export
 blueMetricMaxel2D : Maxel
-blueMetricMaxel2D =
-  MkMaxel [ (MkPixel 1 1, intToBoxInt 1)
-          , (MkPixel 2 2, intToBoxInt 1)
-          ]
+blueMetricMaxel2D = parameterizedBlueMetricMaxel (intToBoxInt 1) (intToBoxInt 1)
 
 ||| 2D Red (Hyperbolic/Relativistic) Metric Maxel: [1, 1] - [2, 2] (signed diagonal self-loops).
+||| Deprecated: Prefer `parameterizedRedMetricMaxel` for dynamic coordinates.
 public export
 redMetricMaxel2D : Maxel
-redMetricMaxel2D =
-  MkMaxel [ (MkPixel 1 1, intToBoxInt 1)
-          , (MkPixel 2 2, intToBoxInt (-1))
-          ]
+redMetricMaxel2D = parameterizedRedMetricMaxel (intToBoxInt 1) (intToBoxInt 1)
 
 ||| 2D Green (Parabolic/Null) Metric Maxel: [1, 2] + [2, 1] (pure off-diagonal bipartite cross-edges).
+||| Deprecated: Prefer `parameterizedGreenMetricMaxel` for dynamic coordinates.
 public export
 greenMetricMaxel2D : Maxel
-greenMetricMaxel2D =
-  MkMaxel [ (MkPixel 1 2, intToBoxInt 1)
-          , (MkPixel 2 1, intToBoxInt 1)
-          ]
+greenMetricMaxel2D = parameterizedGreenMetricMaxel (intToBoxInt 1) (intToBoxInt 1)
 
 ||| Invariant audit verifying the Chromogeometric Metric Support Fingerprints:
 ||| - Blue: Supp = {[1, 1], [2, 2]}
@@ -527,18 +580,6 @@ auditMatrixPathCompositionProof =
       e11 = lookupPixel (MkPixel 1 1) gProd
       e22 = lookupPixel (MkPixel 2 2) gProd
   in sProd == [MkPixel 1 1, MkPixel 2 2] && unwrapBox e11 == 1 && unwrapBox e22 == 1
-
-||| Adds two Maxels by concatenating their pixel multiset entries.
-public export
-addMaxel : Maxel -> Maxel -> Maxel
-addMaxel (MkMaxel ps1) (MkMaxel ps2) = MkMaxel (ps1 ++ ps2)
-
-
-||| Scales a Maxel by a BoxInt scalar.
-public export
-scaleMaxel : BoxInt -> Maxel -> Maxel
-scaleMaxel s (MkMaxel ps) =
-  MkMaxel (map (\(p, w) => (p, s * w)) ps)
 
 ||| Adds two Vexels by concatenating their singleton multiset entries.
 public export
