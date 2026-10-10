@@ -22,6 +22,7 @@ modules = MetricSubstrate,
 
           Stage1.UnixelFraction,
           Stage1.VexelMaxel,
+          Stage1.VexelStream,
           Stage1.FourGeometries,
           Stage1.MetricSignature,
           Stage1.SpatialStencil,

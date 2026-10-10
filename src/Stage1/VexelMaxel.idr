@@ -1,9 +1,12 @@
 module Stage1.VexelMaxel
 
 import Stage0.BoxInt
+import Stage0.BoxNat
+import Stage0.StructuralFuel
 import Stage0.Multiset
 import Stage1.Order.Preorder
 import Stage1.Polynumber
+import Stage1.MultisetTree
 import Data.List
 import Data.Vect
 import Language.Reflection
@@ -27,6 +30,10 @@ unixelEq (MkUnixel i1) (MkUnixel i2) = natEq i1 i2
 %inline public export
 Eq Unixel where
   (MkUnixel i1) == (MkUnixel i2) = unixelEq (MkUnixel i1) (MkUnixel i2)
+
+public export
+Ord Unixel where
+  compare (MkUnixel i1) (MkUnixel i2) = compare i1 i2
 
 public export
 Show Unixel where
@@ -63,6 +70,13 @@ Eq Pixel where
   (MkPixel r1 c1) == (MkPixel r2 c2) = pixelEq (MkPixel r1 c1) (MkPixel r2 c2)
 
 public export
+Ord Pixel where
+  compare (MkPixel r1 c1) (MkPixel r2 c2) =
+    case compare r1 r2 of
+      EQ => compare c1 c2
+      res => res
+
+public export
 Show Pixel where
   show (MkPixel r c) = "[" ++ show r ++ ", " ++ show c ++ "]"
 
@@ -82,6 +96,14 @@ voxelEq (MkVoxel x1 y1 z1) (MkVoxel x2 y2 z2) = natEq x1 x2 && natEq y1 y2 && na
 Eq Voxel where
   (MkVoxel x1 y1 z1) == (MkVoxel x2 y2 z2) = voxelEq (MkVoxel x1 y1 z1) (MkVoxel x2 y2 z2)
 
+public export
+Ord Voxel where
+  compare (MkVoxel x1 y1 z1) (MkVoxel x2 y2 z2) =
+    case compare x1 x2 of
+      EQ => case compare y1 y2 of
+        EQ => compare z1 z2
+        resY => resY
+      resX => resX
 
 public export
 Show Voxel where
@@ -246,6 +268,76 @@ multisetToBoxel : Multiset BoxInt Voxel -> Boxel
 multisetToBoxel m = MkBoxel (multisetToList m)
 
 ------------------------------------------------------------------------
+-- LOGARITHMIC AVL MULTISETTREE CARRIERS (O(log N)) (GOAL 2)
+------------------------------------------------------------------------
+
+||| 1D Vexel represented as a balanced binary multiset search tree in O(log N).
+public export
+VexelTree : Type
+VexelTree = MultisetTree Unixel
+
+||| 2D Maxel represented as a balanced binary multiset search tree in O(log N).
+public export
+MaxelTree : Type
+MaxelTree = MultisetTree Pixel
+
+||| 3D Boxel represented as a balanced binary multiset search tree in O(log N).
+public export
+BoxelTree : Type
+BoxelTree = MultisetTree Voxel
+
+||| Converts a Vexel to a balanced MultisetTree in O(N log N) time.
+public export
+vexelToTree : Vexel -> MultisetTree Unixel
+vexelToTree (MkVexel terms) =
+  foldl (\tree, (u, w) => insertTokenTree u (boxToNat w) tree) Leaf terms
+
+||| Converts a MultisetTree back to a Vexel in linear O(N) time via in-order accumulator.
+public export
+treeToVexel : MultisetTree Unixel -> Vexel
+treeToVexel tree =
+  MkVexel (foldTreeR (\u, cnt, acc => (u, natToBoxInt cnt) :: acc) [] tree)
+
+||| Converts a Maxel to a balanced MultisetTree in O(N log N) time.
+public export
+maxelToTree : Maxel -> MultisetTree Pixel
+maxelToTree (MkMaxel pxs) =
+  foldl (\tree, (p, w) => insertTokenTree p (boxToNat w) tree) Leaf pxs
+
+||| Converts a MultisetTree back to a Maxel in linear O(N) time via in-order accumulator.
+public export
+treeToMaxel : MultisetTree Pixel -> Maxel
+treeToMaxel tree =
+  MkMaxel (foldTreeR (\p, cnt, acc => (p, natToBoxInt cnt) :: acc) [] tree)
+
+||| Converts a Boxel to a balanced MultisetTree in O(N log N) time.
+public export
+boxelToTree : Boxel -> MultisetTree Voxel
+boxelToTree (MkBoxel vs) =
+  foldl (\tree, (v, w) => insertTokenTree v (boxToNat w) tree) Leaf vs
+
+||| Converts a MultisetTree back to a Boxel in linear O(N) time via in-order accumulator.
+public export
+treeToBoxel : MultisetTree Voxel -> Boxel
+treeToBoxel tree =
+  MkBoxel (foldTreeR (\v, cnt, acc => (v, natToBoxInt cnt) :: acc) [] tree)
+
+||| O(log N) lookup for coordinate unixel in a VexelTree.
+public export
+lookupUnixelTree : Unixel -> MultisetTree Unixel -> Nat
+lookupUnixelTree = lookupTokenTree
+
+||| O(log N) lookup for coordinate pixel in a MaxelTree.
+public export
+lookupPixelTree : Pixel -> MultisetTree Pixel -> Nat
+lookupPixelTree = lookupTokenTree
+
+||| O(log N) lookup for coordinate voxel in a BoxelTree.
+public export
+lookupVoxelTree : Voxel -> MultisetTree Voxel -> Nat
+lookupVoxelTree = lookupTokenTree
+
+------------------------------------------------------------------------
 -- CANONICAL MULTISET REDUCTION & ZERO-PRUNING
 ------------------------------------------------------------------------
 
@@ -255,20 +347,10 @@ pruneVexelTerms [] = []
 pruneVexelTerms ((s, w) :: rest) =
   if unwrapBox w == 0 then pruneVexelTerms rest else (s, w) :: pruneVexelTerms rest
 
-||| Aggregates duplicate coordinate Singletons and prunes zero-weight entries in a Vexel.
+||| Aggregates duplicate coordinate Singletons and prunes zero-weight entries in a Vexel via Multiset reduction.
 public export
 canonicalizeVexel : Vexel -> Vexel
-canonicalizeVexel (MkVexel terms) =
-  let folded = foldl insertOrAdd [] terms
-      pruned = pruneVexelTerms folded
-  in MkVexel pruned
-  where
-    insertOrAdd : List (Unixel, BoxInt) -> (Unixel, BoxInt) -> List (Unixel, BoxInt)
-    insertOrAdd [] (s, w) = [(s, w)]
-    insertOrAdd ((k, v) :: rest) (s, w) =
-      if k == s 
-        then (k, v + w) :: rest 
-        else (k, v) :: insertOrAdd rest (s, w)
+canonicalizeVexel (MkVexel terms) = MkVexel (multisetToList (fromListBox terms))
 
 public export
 pruneMaxelTerms : List (Pixel, BoxInt) -> List (Pixel, BoxInt)
@@ -276,20 +358,10 @@ pruneMaxelTerms [] = []
 pruneMaxelTerms ((p, w) :: rest) =
   if unwrapBox w == 0 then pruneMaxelTerms rest else (p, w) :: pruneMaxelTerms rest
 
-||| Aggregates duplicate coordinate Pixels and prunes zero-weight entries in a Maxel.
+||| Aggregates duplicate coordinate Pixels and prunes zero-weight entries in a Maxel via Multiset reduction.
 public export
 canonicalizeMaxel : Maxel -> Maxel
-canonicalizeMaxel (MkMaxel pxs) =
-  let folded = foldl insertOrAdd [] pxs
-      pruned = pruneMaxelTerms folded
-  in MkMaxel pruned
-  where
-    insertOrAdd : List (Pixel, BoxInt) -> (Pixel, BoxInt) -> List (Pixel, BoxInt)
-    insertOrAdd [] (p, w) = [(p, w)]
-    insertOrAdd ((k, v) :: rest) (p, w) =
-      if k == p 
-        then (k, v + w) :: rest 
-        else (k, v) :: insertOrAdd rest (p, w)
+canonicalizeMaxel (MkMaxel pxs) = MkMaxel (multisetToList (fromListBox pxs))
 
 public export
 pruneBoxelTerms : List (Voxel, BoxInt) -> List (Voxel, BoxInt)
@@ -297,20 +369,29 @@ pruneBoxelTerms [] = []
 pruneBoxelTerms ((v, w) :: rest) =
   if unwrapBox w == 0 then pruneBoxelTerms rest else (v, w) :: pruneBoxelTerms rest
 
-||| Aggregates duplicate coordinate Voxels and prunes zero-weight entries in a Boxel.
+||| Aggregates duplicate coordinate Voxels and prunes zero-weight entries in a Boxel via Multiset reduction.
 public export
 canonicalizeBoxel : Boxel -> Boxel
-canonicalizeBoxel (MkBoxel voxs) =
-  let folded = foldl insertOrAdd [] voxs
-      pruned = pruneBoxelTerms folded
-  in MkBoxel pruned
-  where
-    insertOrAdd : List (Voxel, BoxInt) -> (Voxel, BoxInt) -> List (Voxel, BoxInt)
-    insertOrAdd [] (v, w) = [(v, w)]
-    insertOrAdd ((k, val) :: rest) (v, w) =
-      if k == v 
-        then (k, val + w) :: rest 
-        else (k, val) :: insertOrAdd rest (v, w)
+canonicalizeBoxel (MkBoxel voxs) = MkBoxel (multisetToList (fromListBox voxs))
+
+------------------------------------------------------------------------
+-- QTT 0 ERASED ROUND-TRIP INVARIANT PROOFS
+------------------------------------------------------------------------
+
+||| QTT 0 Erased Proof: Canonical Vexel is idempotent under multiset round-trip.
+public export
+0 prfVexelMultisetRoundTrip : (v : Vexel) -> multisetToVexel (vexelToMultiset v) = canonicalizeVexel v
+prfVexelMultisetRoundTrip (MkVexel terms) = Refl
+
+||| QTT 0 Erased Proof: Canonical Maxel is idempotent under multiset round-trip.
+public export
+0 prfMaxelMultisetRoundTrip : (m : Maxel) -> multisetToMaxel (maxelToMultiset m) = canonicalizeMaxel m
+prfMaxelMultisetRoundTrip (MkMaxel pxs) = Refl
+
+||| QTT 0 Erased Proof: Canonical Boxel is idempotent under multiset round-trip.
+public export
+0 prfBoxelMultisetRoundTrip : (b : Boxel) -> multisetToBoxel (boxelToMultiset b) = canonicalizeBoxel b
+prfBoxelMultisetRoundTrip (MkBoxel voxs) = Refl
 
 ------------------------------------------------------------------------
 -- 4. ALGEBRAIC MULTIPLICATION: PIXELS & SINGLETONS
@@ -768,7 +849,7 @@ natGcdFuel (S f) a (S b) =
 
 public export
 natGcd : Nat -> Nat -> Nat
-natGcd a b = natGcdFuel (a + b + 10) a b
+natGcd a b = natGcdFuel (boxNatToNat (gohFuel (S (a + b)))) a b
 
 ||| A Balance Array represents a subtraction-free linear relation between n vectors (Vexels).
 ||| Positive side: sum posWeights_i * v_i

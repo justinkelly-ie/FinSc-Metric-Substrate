@@ -149,7 +149,71 @@ record TheoryRepresentationIsomorphism (lvl : PhysicalLevel) (theory : Type) (to
   verifyRoundTrip : theory -> Bool
 
 --------------------------------------------------------------------------------
--- 4. COMPILE-TIME INVARIANT CRITERIA WITNESSES
+-- 4. QUANTITATIVE TYPE THEORY (QTT) LINEAR SESSION TRANSDUCERS (Rule 04)
+--------------------------------------------------------------------------------
+
+||| An InterLayerTransducer serializes a typed multiset session state migrating
+||| linearly between cosmological levels from `src` to `dst`.
+||| Quantitative multiplicity guarantees at compile time that the payload cannot be
+||| duplicated, dropped, or leaked across inter-layer boundary transitions.
+public export
+data InterLayerTransducer : (src : PhysicalLevel) -> (dst : PhysicalLevel) -> (tok : Type) -> Type where
+  MkInterLayerTransducer : (1 carriedPayload : Multiset BoxInt tok) -> InterLayerTransducer src dst tok
+
+||| Linear projection extracting the carried multiset payload from a transducer session.
+public export
+extractPayload : (1 tr : InterLayerTransducer src dst tok) -> Multiset BoxInt tok
+extractPayload (MkInterLayerTransducer m) = m
+
+||| Linear injection constructing an inter-layer transducer session around a multiset payload.
+public export
+wrapPayload : (1 m : Multiset BoxInt tok) -> InterLayerTransducer src dst tok
+wrapPayload m = MkInterLayerTransducer m
+
+||| A strictly linear morphism between physical levels enforcing Rule 04.
+public export
+record LinearLayerMorphism (lvl : PhysicalLevel) (srcTok : Type) (tgtTok : Type) where
+  constructor MkLinearLayerMorphism
+  linearMorphismName : String
+  linearGeometry     : FundamentalGeometry
+  linearForward      : (1 m : Multiset BoxInt srcTok) -> Multiset BoxInt tgtTok
+
+||| Advances a linear session across a LinearLayerMorphism boundary into destination level `l3`.
+public export
+stepLayerLinear : (1 tr : InterLayerTransducer l1 l2 tokA) ->
+                  (morph : LinearLayerMorphism l3 tokA tokB) ->
+                  InterLayerTransducer l2 l3 tokB
+stepLayerLinear (MkInterLayerTransducer m) morph =
+  MkInterLayerTransducer (morph.linearForward m)
+
+||| Advances a linear session using a direct linear multiset morphism `(1 m : Multiset ...) -> Multiset ...`.
+public export
+stepLayerLinearDirect : (1 tr : InterLayerTransducer l1 l2 tokA) ->
+                        ((1 m : Multiset BoxInt tokA) -> Multiset BoxInt tokB) ->
+                        InterLayerTransducer l2 l3 tokB
+stepLayerLinearDirect (MkInterLayerTransducer m) f =
+  MkInterLayerTransducer (f m)
+
+||| Linearly chains two linear morphisms across sequential physical levels.
+public export
+chainLayerLinear : (1 tr : InterLayerTransducer l1 l2 tokA) ->
+                   (m1 : LinearLayerMorphism l3 tokA tokB) ->
+                   (m2 : LinearLayerMorphism l4 tokB tokC) ->
+                   InterLayerTransducer l3 l4 tokC
+chainLayerLinear tr m1 m2 =
+  stepLayerLinear (stepLayerLinear tr m1) m2
+
+||| Linearly chains two direct multiset morphisms across sequential physical levels.
+public export
+chainLayerLinearDirect : (1 tr : InterLayerTransducer l1 l2 tokA) ->
+                         ((1 m : Multiset BoxInt tokA) -> Multiset BoxInt tokB) ->
+                         ((1 m : Multiset BoxInt tokB) -> Multiset BoxInt tokC) ->
+                         InterLayerTransducer l3 l4 tokC
+chainLayerLinearDirect tr f1 f2 =
+  stepLayerLinearDirect (stepLayerLinearDirect tr f1) f2
+
+--------------------------------------------------------------------------------
+-- 5. COMPILE-TIME INVARIANT CRITERIA WITNESSES
 --------------------------------------------------------------------------------
 
 ||| Theorem 1 (Layer Minimality & Completeness): Exactly 8 physical levels span the universe.

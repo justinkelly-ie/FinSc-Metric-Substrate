@@ -83,30 +83,61 @@ powerNat : Nat -> Nat -> Nat
 powerNat b Z = 1
 powerNat b (S k) = b * powerNat b k
 
-||| Computes the n-th triangular number T_n = n * (n + 1) / 2.
+||| Computes the n-th triangular number T_n = sum_{k=1}^n k natively by structural induction.
+public export
+triangularSum : Nat -> Nat
+triangularSum Z = Z
+triangularSum (S k) = S k + triangularSum k
+
+||| Computes the n-th triangular number T_n.
 public export
 triangularNumber : Nat -> Nat
-triangularNumber n = (n * (n + 1)) `div` 2
+triangularNumber = triangularSum
+
+||| Manifest spatial basis dimension L = 3 (T^3 spatial torus canvas).
+public export
+manifestSpatialDim : Nat
+manifestSpatialDim = 3
 
 ||| Elliptic 3D lattice state capacity: 3^3 = 27 states (Baryon/Visible Matter Canvas).
 %inline public export
 ellipticLatticeCapacity : Nat
-ellipticLatticeCapacity = 27
+ellipticLatticeCapacity = powerNat manifestSpatialDim manifestSpatialDim
+
+||| Clifford / octonion generator degrees D = 7.
+public export
+cliffordGeneratorDim : Nat
+cliffordGeneratorDim = 7
 
 ||| Hyperbolic 2D law storage ROM capacity: 2^7 = 128 states (Dark Energy ROM).
 %inline public export
 hyperbolicRomCapacity : Nat
-hyperbolicRomCapacity = 128
+hyperbolicRomCapacity = powerNat 2 cliffordGeneratorDim
 
-||| Parabolic 10D metric tensor component residue: T_10 = 55 states (Dark Matter Dissipation Sink).
+||| 10D phase space basis dimension: 4 spacetime + 3 SU(3) color + 3 scale metrics.
+public export
+phaseSpaceBasisDim : Nat
+phaseSpaceBasisDim = 10
+
+||| Parabolic 10D metric tensor component residue: T_10 = sum_{k=1}^10 k = 55 states (Dark Matter Dissipation Sink).
 %inline public export
 darkMatterTriangularResidue : Nat
-darkMatterTriangularResidue = 55
+darkMatterTriangularResidue = triangularSum phaseSpaceBasisDim
+
+||| The 4th Primorial p_4# = 2 * 3 * 5 * 7 = 210.
+public export
+primorial4 : Nat
+primorial4 = 2 * 3 * 5 * 7
 
 ||| Canonical Primorial 210 cosmic capacity budget: 27 + 128 + 55 = 210.
 %inline public export
 primorial210Budget : Nat
-primorial210Budget = 210
+primorial210Budget = ellipticLatticeCapacity + hyperbolicRomCapacity + darkMatterTriangularResidue
+
+||| Compile-time proof witness certifying that the chromogeometric partition sum matches the 4th Primorial p_4#.
+public export
+0 prfPrimorialBudgetMatchesFactorization : Stage1.FourGeometries.primorial210Budget = Stage1.FourGeometries.primorial4
+prfPrimorialBudgetMatchesFactorization = Refl
 
 
 ------------------------------------------------------------------------

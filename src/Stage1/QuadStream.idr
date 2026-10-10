@@ -9,6 +9,7 @@ import Stage0.BoxInt
 import Stage0.WitnessLedger
 import Stage0.Multiset
 import Stage0.OnSeq.FusedStream
+import Data.Fuel
 import Data.Vect
 
 %default total
@@ -106,17 +107,34 @@ quadStreamToStream (MkQuadStream e h p s) =
       sStrm = mapStream (\(x, v) => (SubstrateSector, x, v)) (multisetToStream s)
   in eStrm <+> hStrm <+> pStrm <+> sStrm
 
-||| Reconstructs a QuadStreamMultiset payload from a deforested stream of channel-tagged entries.
-public export covering
+||| Reconstructs a QuadStreamMultiset payload from a deforested stream using Fuel.
+public export
+streamToQuadStreamFuel : Eq a => Fuel -> FusedStream (QuadStreamChannel, a, BoxInt) -> QuadStreamMultiset a
+streamToQuadStreamFuel fuel strm =
+  foldStreamFuel fuel (\qs, (ch, x, v) =>
+    let lens = makeQuadLens ch
+        currentMset = lens.viewSector qs
+        newMset = insertItemBox x v currentMset
+    in lens.updateSector newMset qs
+  ) (MkQuadStream ZeroM ZeroM ZeroM ZeroM) strm
+
+||| Reconstructs a QuadStreamMultiset payload from a deforested stream using Nat fuel bound.
+public export
+streamToQuadStreamNat : Eq a => (fuel : Nat) -> FusedStream (QuadStreamChannel, a, BoxInt) -> QuadStreamMultiset a
+streamToQuadStreamNat fuel strm =
+  foldStreamNat fuel (\qs, (ch, x, v) =>
+    let lens = makeQuadLens ch
+        currentMset = lens.viewSector qs
+        newMset = insertItemBox x v currentMset
+    in lens.updateSector newMset qs
+  ) (MkQuadStream ZeroM ZeroM ZeroM ZeroM) strm
+
+||| Reconstructs a QuadStreamMultiset payload from a deforested stream with standard total fuel bound (1000).
+public export
 streamToQuadStream : Eq a => FusedStream (QuadStreamChannel, a, BoxInt) -> QuadStreamMultiset a
-streamToQuadStream strm = foldStream updateSector (MkQuadStream ZeroM ZeroM ZeroM ZeroM) strm
-  where
-    updateSector : QuadStreamMultiset a -> (QuadStreamChannel, a, BoxInt) -> QuadStreamMultiset a
-    updateSector qs (ch, x, v) =
-      let lens = makeQuadLens ch
-          currentMset = lens.viewSector qs
-          newMset = insertItemBox x v currentMset
-      in lens.updateSector newMset qs
+streamToQuadStream = streamToQuadStreamNat 1000
+
+
 
 ||| Calculates total integer mass aggregated across all 4 sectors of a QuadStreamMultiset payload.
 public export
