@@ -134,6 +134,25 @@ public export
 streamToQuadStream : Eq a => FusedStream (QuadStreamChannel, a, BoxInt) -> QuadStreamMultiset a
 streamToQuadStream = streamToQuadStreamNat 1000
 
+||| Direct stream bundle of 4 distinct cosmological channel streams (Rule 04).
+public export
+record QuadStreamFusedBundle (a : Type) where
+  constructor MkQuadStreamBundle
+  ellipticChannel   : FusedStream (a, BoxInt)
+  hyperbolicChannel : FusedStream (a, BoxInt)
+  parabolicChannel  : FusedStream (a, BoxInt)
+  substrateChannel  : FusedStream (a, BoxInt)
+
+||| Flattens a QuadStreamFusedBundle into a single tagged stream without allocations.
+public export
+fusedBundleToTaggedStream : QuadStreamFusedBundle a -> FusedStream (QuadStreamChannel, a, BoxInt)
+fusedBundleToTaggedStream (MkQuadStreamBundle e h p s) =
+  let eStrm = mapStream (\(x, v) => (EllipticSector, x, v)) e
+      hStrm = mapStream (\(x, v) => (HyperbolicSector, x, v)) h
+      pStrm = mapStream (\(x, v) => (ParabolicSector, x, v)) p
+      sStrm = mapStream (\(x, v) => (SubstrateSector, x, v)) s
+  in eStrm <+> hStrm <+> pStrm <+> sStrm
+
 
 
 ||| Calculates total integer mass aggregated across all 4 sectors of a QuadStreamMultiset payload.
