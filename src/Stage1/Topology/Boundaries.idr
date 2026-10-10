@@ -2,6 +2,7 @@ module Stage1.Topology.Boundaries
 
 import public Stage0.BoxInt
 import public Stage0.Multiset
+import Stage0.OnSeq.FusedStream as FS
 import public Stage1.VexelMaxel
 import Data.List
 import Data.Vect
@@ -27,7 +28,7 @@ multisetBoundary1To0 (AddM (MkPixel u v) w rest) =
 
 ||| Canonical Maxel to Vexel boundary operator ∂₁ : Maxel -> Vexel.
 public export
-boundaryMaxelToVexel : Maxel -> Vexel
+boundaryMaxelToVexel : Stage1.VexelMaxel.Maxel -> Vexel
 boundaryMaxelToVexel m = multisetToVexel (multisetBoundary1To0 (maxelToMultiset m))
 
 ||| Pure Multiset Boundary operator ∂₂ : List Pixel -> Multiset BoxInt Pixel
@@ -39,7 +40,7 @@ multisetBoundary2To1 (p :: rest) = insertItemBox p (intToBoxInt 1) (multisetBoun
 
 ||| Canonical Plaquette to Maxel boundary operator ∂₂ : List Pixel -> Maxel.
 public export
-boundaryPlaquetteToMaxel : List Pixel -> Maxel
+boundaryPlaquetteToMaxel : List Pixel -> Stage1.VexelMaxel.Maxel
 boundaryPlaquetteToMaxel loopEdges = multisetToMaxel (multisetBoundary2To1 loopEdges)
 
 ||| Pure Multiset Second Boundary Operator ∂² mapping a 2-cell closed loop down to 0-cells.
@@ -122,6 +123,50 @@ public export
 multisetLaplacian0 : List Pixel -> Multiset BoxInt Unixel -> Multiset BoxInt Unixel
 multisetLaplacian0 edges phi = multisetBoundary1To0 (multisetCoboundary0To1 edges phi)
 
+||| Deforested DEC Coboundary operator d₀ : FusedStream Pixel -> Multiset BoxInt Unixel -> FusedStream (Pixel, BoxInt)
+||| mapping directed edge pixels in a stream to their discrete gradients without intermediate List allocations.
+public export
+streamCoboundary0To1 : FusedStream Pixel -> Multiset BoxInt Unixel -> FusedStream (Pixel, BoxInt)
+streamCoboundary0To1 strm phi =
+  filterMapStream (\p@(MkPixel u v) =>
+    let phiU = lookupCountBox (MkUnixel u) phi
+        phiV = lookupCountBox (MkUnixel v) phi
+        diff = subBox phiV phiU
+    in case diff of
+         MkBoxInt 0 => Nothing
+         _          => Just (p, diff)
+  ) strm
+
+||| Deforested DEC Coboundary operator d₁ : FusedStream DecPlaquette -> Multiset BoxInt Pixel -> FusedStream (DecPlaquette, BoxInt)
+||| evaluating the circulation (flux) through each plaquette in a deforested stream.
+public export
+streamCoboundary1 : FusedStream DecPlaquette -> Multiset BoxInt Pixel -> FusedStream (DecPlaquette, BoxInt)
+streamCoboundary1 strm a =
+  filterMapStream (\pl@(MkDecPlaquette loop) =>
+    let flux = multisetCoboundary1To2 loop a
+    in case flux of
+         MkBoxInt 0 => Nothing
+         _          => Just (pl, flux)
+  ) strm
+
+||| Folds a deforested coboundary stream into an edge Multiset with structural fuel.
+public export
+foldStreamCoboundaryToMultiset : Fuel -> FusedStream (Pixel, BoxInt) -> Multiset BoxInt Pixel
+foldStreamCoboundaryToMultiset f strm =
+  foldStreamFuel f (\acc, (p, w) => insertItemBox p w acc) ZeroM strm
+
+||| Evaluates discrete Poisson-Laplacian Δ(Φ) = ∂₁ (d₀ Φ) directly over an edge stream in a single-pass fold.
+public export
+streamLaplacian0Fuel : Fuel -> FusedStream Pixel -> Multiset BoxInt Unixel -> Multiset BoxInt Unixel
+streamLaplacian0Fuel f strm phi =
+  let gradStrm = streamCoboundary0To1 strm phi
+  in foldStreamFuel f (\acc, (MkPixel u v, diff) =>
+       let negDiff = mulBox (intToBoxInt (-1)) diff
+           acc1 = insertItemBox (MkUnixel v) diff acc
+       in insertItemBox (MkUnixel u) negDiff acc1
+     ) ZeroM gradStrm
+
+
 --------------------------------------------------------------------------------
 -- 3. COMPILE-TIME HOMOLOGICAL NILPOTENCY & GAUGE INVARIANCE WITNESSES
 --------------------------------------------------------------------------------
@@ -182,8 +227,21 @@ auditDecNilpotencyProofExport =
                 (boxSub (MkBoxInt 13) (MkBoxInt 42))))
         (MkBoxInt 0)
 
+||| Static verification witness: Deforested stream coboundary matches list multisetCoboundary0To1.
+public export
+auditStreamCoboundaryEquivalenceProof : Bool
+auditStreamCoboundaryEquivalenceProof =
+  let edges = [MkPixel 1 2, MkPixel 2 3]
+      phi   = AddM (MkUnixel 1) (intToBoxInt 10)
+              (AddM (MkUnixel 2) (intToBoxInt 25)
+              (AddM (MkUnixel 3) (intToBoxInt 40) ZeroM))
+      listGrad = multisetCoboundary0To1 edges phi
+      strmGrad = foldStreamCoboundaryToMultiset (limit 10) (streamCoboundary0To1 (stream edges) phi)
+  in listGrad == strmGrad
+
 ||| Rule 01 Compile-Time Invariant Auditing Macro for DEC Nilpotency (d² = 0).
 public export
 %macro
 auditDecNilpotency : Elab (Stage1.Topology.Boundaries.auditDecNilpotencyProofExport = True)
 auditDecNilpotency = pure Refl
+
