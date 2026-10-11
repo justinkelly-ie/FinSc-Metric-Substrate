@@ -94,30 +94,115 @@ public export
 triangularNumber : Nat -> Nat
 triangularNumber = triangularSum
 
-||| Manifest spatial basis dimension L = 3 (T^3 spatial torus canvas).
+------------------------------------------------------------------------
+-- 2. CARRIER-GROUNDED BASIS MULTISETS & DIMENSIONS
+------------------------------------------------------------------------
+
+||| Fundamental color multiset carrier basis [RedColor, GreenColor, BlueColor].
+public export
+colorBasisList : List ColorCharge
+colorBasisList = [RedColor, GreenColor, BlueColor]
+
+||| Manifest spatial basis dimension L = 3 (T^3 spatial torus canvas),
+||| grounded definitionally in the color charge multiset carrier cardinality.
 public export
 manifestSpatialDim : Nat
-manifestSpatialDim = 3
+manifestSpatialDim = length colorBasisList
 
 ||| Elliptic 3D lattice state capacity: 3^3 = 27 states (Baryon/Visible Matter Canvas).
 %inline public export
 ellipticLatticeCapacity : Nat
 ellipticLatticeCapacity = powerNat manifestSpatialDim manifestSpatialDim
 
-||| Clifford / octonion generator degrees D = 7.
+||| The 7 imaginary octonionic units e_1 ... e_7 generating the Clifford algebra Cl(0, 7).
+public export
+data OctonionUnit = E1 | E2 | E3 | E4 | E5 | E6 | E7
+
+public export
+Eq OctonionUnit where
+  E1 == E1 = True
+  E2 == E2 = True
+  E3 == E3 = True
+  E4 == E4 = True
+  E5 == E5 = True
+  E6 == E6 = True
+  E7 == E7 = True
+  _  == _  = False
+
+public export
+Show OctonionUnit where
+  show E1 = "e1"
+  show E2 = "e2"
+  show E3 = "e3"
+  show E4 = "e4"
+  show E5 = "e5"
+  show E6 = "e6"
+  show E7 = "e7"
+
+||| The 7-element imaginary octonionic basis carrier.
+public export
+octonionBasisList : List OctonionUnit
+octonionBasisList = [E1, E2, E3, E4, E5, E6, E7]
+
+||| Clifford / octonion generator degrees D = 7,
+||| grounded in the octonion basis multiset cardinality.
 public export
 cliffordGeneratorDim : Nat
-cliffordGeneratorDim = 7
+cliffordGeneratorDim = length octonionBasisList
 
 ||| Hyperbolic 2D law storage ROM capacity: 2^7 = 128 states (Dark Energy ROM).
 %inline public export
 hyperbolicRomCapacity : Nat
 hyperbolicRomCapacity = powerNat 2 cliffordGeneratorDim
 
-||| 10D phase space basis dimension: 4 spacetime + 3 SU(3) color + 3 scale metrics.
+||| 4D spacetime coordinate basis generators (t, x, y, z).
+public export
+data SpacetimeBasis = Time0 | Space1 | Space2 | Space3
+
+public export
+Eq SpacetimeBasis where
+  Time0  == Time0  = True
+  Space1 == Space1 = True
+  Space2 == Space2 = True
+  Space3 == Space3 = True
+  _      == _      = False
+
+public export
+Show SpacetimeBasis where
+  show Time0  = "t"
+  show Space1 = "x"
+  show Space2 = "y"
+  show Space3 = "z"
+
+public export
+spacetimeBasisList : List SpacetimeBasis
+spacetimeBasisList = [Time0, Space1, Space2, Space3]
+
+||| 3-metric scale basis generators (Blue, Red, Green).
+public export
+data ScaleBasis = ScaleBlue | ScaleRed | ScaleGreen
+
+public export
+Eq ScaleBasis where
+  ScaleBlue  == ScaleBlue  = True
+  ScaleRed   == ScaleRed   = True
+  ScaleGreen == ScaleGreen = True
+  _          == _          = False
+
+public export
+Show ScaleBasis where
+  show ScaleBlue  = "s_Blue"
+  show ScaleRed   = "s_Red"
+  show ScaleGreen = "s_Green"
+
+public export
+scaleBasisList : List ScaleBasis
+scaleBasisList = [ScaleBlue, ScaleRed, ScaleGreen]
+
+||| 10D phase space basis dimension: direct sum of spacetime (4) + color (3) + scale (3) basis carriers.
 public export
 phaseSpaceBasisDim : Nat
-phaseSpaceBasisDim = 10
+phaseSpaceBasisDim = length spacetimeBasisList + length colorBasisList + length scaleBasisList
 
 ||| Parabolic 10D metric tensor component residue: T_10 = sum_{k=1}^10 k = 55 states (Dark Matter Dissipation Sink).
 %inline public export
