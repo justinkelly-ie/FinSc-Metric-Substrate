@@ -2,6 +2,7 @@ module Stage1.FourGeometries
 
 import Stage0.BoxInt
 import Stage1.ScaleTransform
+import Stage1.TypeTheory.Smoothness
 import Data.Fin
 
 %default total
@@ -87,12 +88,12 @@ powerNat b (S k) = b * powerNat b k
 public export
 triangularSum : Nat -> Nat
 triangularSum Z = Z
-triangularSum (S k) = S k + triangularSum k
+triangularSum (S k) = S k + Stage1.FourGeometries.triangularSum k
 
 ||| Computes the n-th triangular number T_n.
 public export
 triangularNumber : Nat -> Nat
-triangularNumber = triangularSum
+triangularNumber = Stage1.FourGeometries.triangularSum
 
 ------------------------------------------------------------------------
 -- 2. CARRIER-GROUNDED BASIS MULTISETS & DIMENSIONS
@@ -107,7 +108,12 @@ colorBasisList = [RedColor, GreenColor, BlueColor]
 ||| grounded definitionally in the color charge multiset carrier cardinality.
 public export
 manifestSpatialDim : Nat
-manifestSpatialDim = length colorBasisList
+manifestSpatialDim = 3
+
+||| Definitional proof that manifest spatial dimension matches color basis carrier length.
+public export
+0 prfManifestSpatialDimGrounded : Stage1.FourGeometries.manifestSpatialDim = length Stage1.FourGeometries.colorBasisList
+prfManifestSpatialDimGrounded = Refl
 
 ||| Elliptic 3D lattice state capacity: 3^3 = 27 states (Baryon/Visible Matter Canvas).
 %inline public export
@@ -148,7 +154,12 @@ octonionBasisList = [E1, E2, E3, E4, E5, E6, E7]
 ||| grounded in the octonion basis multiset cardinality.
 public export
 cliffordGeneratorDim : Nat
-cliffordGeneratorDim = length octonionBasisList
+cliffordGeneratorDim = 7
+
+||| Definitional proof that Clifford generator dimension matches octonion basis length.
+public export
+0 prfCliffordGeneratorDimGrounded : Stage1.FourGeometries.cliffordGeneratorDim = length Stage1.FourGeometries.octonionBasisList
+prfCliffordGeneratorDimGrounded = Refl
 
 ||| Hyperbolic 2D law storage ROM capacity: 2^7 = 128 states (Dark Energy ROM).
 %inline public export
@@ -202,12 +213,17 @@ scaleBasisList = [ScaleBlue, ScaleRed, ScaleGreen]
 ||| 10D phase space basis dimension: direct sum of spacetime (4) + color (3) + scale (3) basis carriers.
 public export
 phaseSpaceBasisDim : Nat
-phaseSpaceBasisDim = length spacetimeBasisList + length colorBasisList + length scaleBasisList
+phaseSpaceBasisDim = 10
+
+||| Definitional proof that phase space dimension matches the basis list sum.
+public export
+0 prfPhaseSpaceBasisDimGrounded : Stage1.FourGeometries.phaseSpaceBasisDim = length Stage1.FourGeometries.spacetimeBasisList + length Stage1.FourGeometries.colorBasisList + length Stage1.FourGeometries.scaleBasisList
+prfPhaseSpaceBasisDimGrounded = Refl
 
 ||| Parabolic 10D metric tensor component residue: T_10 = sum_{k=1}^10 k = 55 states (Dark Matter Dissipation Sink).
 %inline public export
 darkMatterTriangularResidue : Nat
-darkMatterTriangularResidue = triangularSum phaseSpaceBasisDim
+darkMatterTriangularResidue = Stage1.FourGeometries.triangularSum phaseSpaceBasisDim
 
 ||| The 4th Primorial p_4# = 2 * 3 * 5 * 7 = 210.
 public export
@@ -239,3 +255,32 @@ ChromogeometricQuadranceConservation b r g = b + r = g
 public export
 0 prfChromogeometricBudgetConservation : ChromogeometricQuadranceConservation (Stage1.FourGeometries.ellipticLatticeCapacity + Stage1.FourGeometries.hyperbolicRomCapacity) Stage1.FourGeometries.darkMatterTriangularResidue Stage1.FourGeometries.primorial210Budget
 prfChromogeometricBudgetConservation = Refl
+
+------------------------------------------------------------------------
+-- 6. CERTIFIED CAPACITY DIMENSIONS (Rule 03)
+------------------------------------------------------------------------
+
+||| Certified manifest spatial basis dimension L = 3 (Sigma-pair).
+public export
+manifestSpatialDimension : CosmicDimension
+manifestSpatialDimension = dimManifest3
+
+||| Certified Elliptic lattice state capacity: 3^3 = 27 (Sigma-pair).
+public export
+ellipticDimension : CosmicDimension
+ellipticDimension = dimElliptic27
+
+||| Certified Hyperbolic ROM storage capacity: 2^7 = 128 (Sigma-pair).
+public export
+hyperbolicDimension : CosmicDimension
+hyperbolicDimension = dimHyperbolic128
+
+||| Certified Parabolic dissipation sink residue: T_10 = 55 (Sigma-pair).
+public export
+darkMatterDimension : CosmicDimension
+darkMatterDimension = dimParabolic55
+
+||| Certified Primorial 210 cosmic capacity budget: 27 + 128 + 55 = 210 (Sigma-pair).
+public export
+primorialBudgetDimension : CosmicDimension
+primorialBudgetDimension = dimPrimorial210
