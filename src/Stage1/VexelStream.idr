@@ -4,6 +4,7 @@ import Stage0.BoxInt
 import Stage0.BoxNat
 import Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
+import Stage1.MultisetTree as MT
 import Stage1.VexelMaxel as VM
 
 %default total
@@ -71,6 +72,39 @@ public export
 supportBoxelStream : FS.FusedStream (VM.Voxel, BoxInt) -> FS.FusedStream VM.Voxel
 supportBoxelStream =
   FS.filterMapStream (\(vx, w) => if unwrapBox w /= 0 then Just vx else Nothing)
+
+------------------------------------------------------------------------
+-- DEFORESTED MATRIX STREAM TRANSFORMERS (RULE 04 SECTION 8)
+------------------------------------------------------------------------
+
+||| Scales a Maxel pixel stream by a BoxInt scalar with zero intermediate allocations.
+public export
+scaleMaxelStream : BoxInt -> FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream (VM.Pixel, BoxInt)
+scaleMaxelStream s =
+  FS.mapStream (\(p, w) => (p, s * w))
+
+||| Scales a Vexel basis stream by a BoxInt scalar with zero intermediate allocations.
+public export
+scaleVexelStream : BoxInt -> FS.FusedStream (VM.Unixel, BoxInt) -> FS.FusedStream (VM.Unixel, BoxInt)
+scaleVexelStream s =
+  FS.mapStream (\(u, w) => (u, s * w))
+
+||| Streams a balanced MaxelTree directly into a FusedStream in O(log N) stack frames.
+public export
+streamMaxelTreeDirect : VM.MaxelTree -> FS.FusedStream (VM.Pixel, BoxInt)
+streamMaxelTreeDirect tree =
+  FS.mapStream (\(p, cnt) => (p, natToBoxInt cnt)) (MT.streamMultisetTreeDirect tree)
+
+||| Deforested discrete matrix multiplication stream transformer:
+||| Multiplies a left Pixel stream by a right Pixel stream without intermediate list materialization.
+public export
+mulMaxelStream : FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream (VM.Pixel, BoxInt)
+mulMaxelStream leftStream rightStream =
+  FS.flatMapStream (\(p1, w1) =>
+    FS.filterMapStream (\(p2, w2) =>
+      case VM.mulPixel p1 p2 of
+        Just pOut => Just (pOut, w1 * w2)
+        Nothing   => Nothing) rightStream) leftStream
 
 
 

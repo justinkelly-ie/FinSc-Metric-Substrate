@@ -167,6 +167,25 @@ public export
 Show Maxel where
   show (MkMaxel ps) = "Maxel(" ++ show ps ++ ")"
 
+------------------------------------------------------------------------
+-- DIMENSION-INDEXED DEPENDENT MAXEL (RULE 03 & 2LTT ARCHITECTURE)
+------------------------------------------------------------------------
+
+||| A SquareMaxel is a square discrete matrix of dimension `dim`,
+||| backed by a balanced AVL MultisetTree of Pixels in O(log N).
+public export
+record SquareMaxel (dim : Nat) where
+  constructor MkSquareMaxel
+  entries : MultisetTree Pixel
+
+public export
+Eq (SquareMaxel dim) where
+  (MkSquareMaxel e1) == (MkSquareMaxel e2) = e1 == e2
+
+public export
+{dim : Nat} -> Show (SquareMaxel dim) where
+  show (MkSquareMaxel es) = "SquareMaxel[" ++ show dim ++ "](" ++ show (treeToList es) ++ ")"
+
 ||| @deprecated Linear O(N) lookupUnixel is suitable for small basis sets.
 ||| For canonical multisets, use canonicalizeVexel or MultisetTree.
 public export
@@ -310,6 +329,16 @@ treeToMaxel : MultisetTree Pixel -> Maxel
 treeToMaxel tree =
   MkMaxel (foldTreeR (\p, cnt, acc => (p, natToBoxInt cnt) :: acc) [] tree)
 
+||| Converts a SquareMaxel into a standard Maxel carrier.
+public export
+squareMaxelToMaxel : SquareMaxel dim -> Maxel
+squareMaxelToMaxel (MkSquareMaxel es) = treeToMaxel es
+
+||| Converts a standard Maxel into a SquareMaxel with explicit dimension bound.
+public export
+maxelToSquareMaxel : (dim : Nat) -> Maxel -> SquareMaxel dim
+maxelToSquareMaxel dim m = MkSquareMaxel (maxelToTree m)
+
 ||| Converts a Boxel to a balanced MultisetTree in O(N log N) time.
 public export
 boxelToTree : Boxel -> MultisetTree Voxel
@@ -449,6 +478,7 @@ identityMaxel =
           , (MkPixel 3 3, intToBoxInt 1)
           ]
 
+
 ------------------------------------------------------------------------
 -- WILDBERGER SUPPORT & GRAPH INCIDENCE OPERATIONS
 ------------------------------------------------------------------------
@@ -529,6 +559,81 @@ auditParameterizedMetricOperatorIdentity x y =
       lhs22 = lookupPixel (MkPixel 2 2) lhsSum
       rhs22 = lookupPixel (MkPixel 2 2) rhsExpected
   in boxEq lhs11 rhs11 && boxEq lhs22 rhs22
+
+------------------------------------------------------------------------
+-- DIMENSION-CHECKED 2D CHROMOGEOMETRIC TRIADS (RULE 03 & RULE 01)
+------------------------------------------------------------------------
+
+||| Constructs a dimension-indexed identity SquareMaxel of size `dim` in O(dim log dim).
+public export
+identitySquareMaxel : (dim : Nat) -> SquareMaxel dim
+identitySquareMaxel dim =
+  let pxs = [MkPixel (S i) (S i) | i <- [0..pred dim]]
+      t   = foldl (\tree, p => insertTokenTree p 1 tree) Leaf pxs
+  in MkSquareMaxel t
+
+||| Dimension-checked discrete matrix multiplication for SquareMaxel:
+||| Multiplies two matrices of matching dimension `dim` in O(dim^2 log dim).
+public export
+mulSquareMaxel : SquareMaxel dim -> SquareMaxel dim -> SquareMaxel dim
+mulSquareMaxel (MkSquareMaxel e1) (MkSquareMaxel e2) =
+  let m1 = treeToMaxel e1
+      m2 = treeToMaxel e2
+      mProd = mulMaxel m1 m2
+  in MkSquareMaxel (maxelToTree mProd)
+
+||| Scales a SquareMaxel by a BoxInt scalar.
+public export
+scaleSquareMaxel : BoxInt -> SquareMaxel dim -> SquareMaxel dim
+scaleSquareMaxel s (MkSquareMaxel es) =
+  let m = treeToMaxel es
+      mScaled = scaleMaxel s m
+  in MkSquareMaxel (maxelToTree mScaled)
+
+||| Adds two SquareMaxels of identical dimension `dim`.
+public export
+addSquareMaxel : SquareMaxel dim -> SquareMaxel dim -> SquareMaxel dim
+addSquareMaxel (MkSquareMaxel e1) (MkSquareMaxel e2) =
+  let m1 = treeToMaxel e1
+      m2 = treeToMaxel e2
+      mSum = addMaxel m1 m2
+  in MkSquareMaxel (maxelToTree mSum)
+
+||| 2D Blue (Elliptic) Metric SquareMaxel of dimension 2:
+||| x^2 [1, 1] + y^2 [2, 2] in O(log N) AVL tree.
+public export
+parameterizedBlueSquareMaxel : BoxInt -> BoxInt -> SquareMaxel 2
+parameterizedBlueSquareMaxel x y =
+  maxelToSquareMaxel 2 (parameterizedBlueMetricMaxel x y)
+
+||| 2D Red (Hyperbolic) Metric SquareMaxel of dimension 2:
+||| x^2 [1, 1] - y^2 [2, 2] in O(log N) AVL tree.
+public export
+parameterizedRedSquareMaxel : BoxInt -> BoxInt -> SquareMaxel 2
+parameterizedRedSquareMaxel x y =
+  maxelToSquareMaxel 2 (parameterizedRedMetricMaxel x y)
+
+||| 2D Green (Parabolic) Metric SquareMaxel of dimension 2:
+||| xy [1, 2] + xy [2, 1] in O(log N) AVL tree.
+public export
+parameterizedGreenSquareMaxel : BoxInt -> BoxInt -> SquareMaxel 2
+parameterizedGreenSquareMaxel x y =
+  maxelToSquareMaxel 2 (parameterizedGreenMetricMaxel x y)
+
+||| Dimension-checked algebraic invariant audit verifying the chromogeometric operator identity:
+||| g_Red^2 + g_Green^2 == Q_Blue * g_Blue strictly within SquareMaxel 2 algebra.
+public export
+auditParameterizedSquareMetricOperatorIdentity : (x : BoxInt) -> (y : BoxInt) -> Bool
+auditParameterizedSquareMetricOperatorIdentity x y =
+  let gB = parameterizedBlueSquareMaxel x y
+      gR = parameterizedRedSquareMaxel x y
+      gG = parameterizedGreenSquareMaxel x y
+      gR2 = mulSquareMaxel gR gR
+      gG2 = mulSquareMaxel gG gG
+      lhsSum = addSquareMaxel gR2 gG2
+      qBlue = (x * x) + (y * y)
+      rhsExpected = scaleSquareMaxel qBlue gB
+  in lhsSum == rhsExpected
 
 ||| 2D Blue (Elliptic/Euclidean) Metric Maxel: [1, 1] + [2, 2] (pure diagonal self-loops).
 ||| Deprecated: Prefer `parameterizedBlueMetricMaxel` for dynamic coordinates.

@@ -64,6 +64,11 @@ public export
 ObserverUniverseState : Type
 ObserverUniverseState = UniverseState 27 128 55
 
+||| Compile-time proof witness auditing ObserverUniverseState total capacity matches Primorial 210.
+public export
+0 prfObserverUniverseCapacity210 : (st : ObserverUniverseState) -> totalStateCapacity st = 210
+prfObserverUniverseCapacity210 _ = Refl
+
 ||| Canonical Genesis Vacuum Universe State type: 0 VM, 128 DE, 0 DM (Background 128).
 public export
 GenesisVacuumUniverseState : Type

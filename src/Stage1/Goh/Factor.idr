@@ -389,6 +389,18 @@ gohFactorToCompanionMaxel : {p : Nat} -> GohFactor p -> VM.Maxel
 gohFactorToCompanionMaxel {p} f =
   companionMaxelFromFeedback (gohDegree p) (gohFactorFeedbackCoeffs p f)
 
+||| Constructs a dimension-indexed companion SquareMaxel directly from feedback coefficients.
+public export
+companionSquareMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> VM.SquareMaxel dim
+companionSquareMaxelFromFeedback dim coeffs =
+  VM.maxelToSquareMaxel dim (companionMaxelFromFeedback dim coeffs)
+
+||| Constructs a dimension-indexed companion SquareMaxel from an irreducible GohFactor.
+public export
+gohFactorToCompanionSquareMaxel : {p : Nat} -> GohFactor p -> VM.SquareMaxel (gohDegree p)
+gohFactorToCompanionSquareMaxel {p} f =
+  companionSquareMaxelFromFeedback (gohDegree p) (gohFactorFeedbackCoeffs p f)
+
 ------------------------------------------------------------------------
 -- 6. COMPILE-TIME SUPPORT COMMUTATION PROOFS VIA MULTISETTREE (RULE 01)
 ------------------------------------------------------------------------
