@@ -2,6 +2,7 @@ module Stage1.UnixelFraction
 
 import Stage0.BoxInt
 import Stage0.SignedFraction
+import Stage0.StructuralFuel
 import Stage1.VexelMaxel
 import Stage0.Multiset
 import Stage1.Order.Preorder
@@ -53,6 +54,18 @@ zeroUnixelFraction = mkUnixelFraction (intToBoxInt 0) 1
 public export
 unitUnixelFraction : UnixelFraction
 unitUnixelFraction = mkUnixelFraction (intToBoxInt 1) 1
+
+||| Constructive state capacity of an exact rational: |n| + d.
+public export
+%inline
+fractionCapacity : UnixelFraction -> Nat
+fractionCapacity (MkUnixelFraction n (MkUnixel d)) = boxToNat (absBox n) + d
+
+||| Model-indexed Goh fuel derived directly from the fraction's state capacity.
+public export
+%inline
+fractionGohFuel : (q : UnixelFraction) -> GohFuel (fractionCapacity q)
+fractionGohFuel q = gohFuelForCapacity (fractionCapacity q)
 
 ||| Addition of SingFractions: (n1/d1) + (n2/d2) = (n1*d2 + n2*d1) / (d1*d2)
 ||| Fast common denominator path preserves exact constructivist representation without Peano blowup.
@@ -249,13 +262,26 @@ fromContinuedFraction (a :: rest) =
       aFrac = mkUnixelFraction a 1
   in addUnixelFraction aFrac oneOverRest
 
+||| Continued fraction expansion parameterized by model-indexed GohFuel.
+public export
+toContinuedFractionFuelModel : GohFuel cap -> UnixelFraction -> List BoxInt
+toContinuedFractionFuelModel fuel q = toContinuedFraction (gohSteps fuel) q
+
+||| Continued fraction expansion using canonical structural Goh fuel derived from fraction capacity.
+public export
+toContinuedFractionGoh : UnixelFraction -> List BoxInt
+toContinuedFractionGoh q = toContinuedFractionFuelModel (fractionGohFuel q) q
+
 ||| Audits that Continued Fraction decomposition and reconstruction preserve exact rational equivalence:
 ||| For q = 43 / 19, continued fraction is [2; 3, 1, 4] (2 + 1/(3 + 1/(1 + 1/4)) = 2 + 1/(3 + 4/5) = 2 + 5/19 = 43/19).
 public export
 auditContinuedFractionProof : Bool
 auditContinuedFractionProof =
-  (intToBoxInt 43 == intToBoxInt 43) &&
-  (intToBoxInt 19 == intToBoxInt 19)
+  toContinuedFractionGoh (mkUnixelFraction (intToBoxInt 43) 19) == [intToBoxInt 2, intToBoxInt 3, intToBoxInt 1, intToBoxInt 4]
+
+public export
+prfContinuedFractionGoh43_19 : toContinuedFractionGoh (mkUnixelFraction (intToBoxInt 43) 19) = [intToBoxInt 2, intToBoxInt 3, intToBoxInt 1, intToBoxInt 4]
+prfContinuedFractionGoh43_19 = Refl
 
 ------------------------------------------------------------------------
 -- 5. STERN-BROCOT RATIONAL TREE & MEDIANT PATHFINDING
@@ -323,12 +349,29 @@ fromSternBrocotPath path =
       let m = mediantUnixelFraction l r
       in helper rest m r
 
+||| Stern-Brocot binary path parameterized by model-indexed GohFuel.
+public export
+toSternBrocotPathFuelModel : GohFuel cap -> UnixelFraction -> List SternBrocotBranch
+toSternBrocotPathFuelModel fuel q = toSternBrocotPath (gohSteps fuel) q
+
+||| Stern-Brocot binary path using canonical structural Goh fuel derived from fraction capacity.
+public export
+toSternBrocotPathGoh : UnixelFraction -> List SternBrocotBranch
+toSternBrocotPathGoh q = toSternBrocotPathFuelModel (fractionGohFuel q) q
+
 ||| Audits that Stern-Brocot path encoding for 5/3 is [R, L, R] and reconstructs to 5/3.
 public export
 auditSternBrocotProof : Bool
 auditSternBrocotProof =
-  (intToBoxInt 5 == intToBoxInt 5) &&
-  (intToBoxInt 3 == intToBoxInt 3)
+  toSternBrocotPathGoh (mkUnixelFraction (intToBoxInt 5) 3) == [BranchR, BranchL, BranchR]
+
+public export
+prfSternBrocotPathGoh5_3 : toSternBrocotPathGoh (mkUnixelFraction (intToBoxInt 5) 3) = [BranchR, BranchL, BranchR]
+prfSternBrocotPathGoh5_3 = Refl
+
+public export
+prfSternBrocotPathGoh2_3 : toSternBrocotPathGoh (mkUnixelFraction (intToBoxInt 2) 3) = [BranchL, BranchR]
+prfSternBrocotPathGoh2_3 = Refl
 
 ------------------------------------------------------------------------
 -- 6. HEHNER'S CONSTRUCTIVIST SCALE CONVERSION (BIT <=> STATE <=> CHANCE)
@@ -339,6 +382,11 @@ auditSternBrocotProof =
 public export
 hehnerBitDepth : (fuel : Nat) -> UnixelFraction -> Nat
 hehnerBitDepth fuel frac = length (toSternBrocotPath fuel frac)
+
+||| Hehner Bit Scale using canonical structural Goh fuel derived from fraction capacity.
+public export
+hehnerBitDepthGoh : UnixelFraction -> Nat
+hehnerBitDepthGoh frac = length (toSternBrocotPathGoh frac)
 
 ||| Hehner State Scale: Computes state cardinality s = 2^b from integer bit depth b.
 public export
