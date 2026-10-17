@@ -1,6 +1,7 @@
 module Stage1.FourGeometries
 
 import Stage0.BoxInt
+import Stage0.StructuralFuel
 import Stage1.ScaleTransform
 import Stage1.TypeTheory.Smoothness
 import Data.Fin
@@ -284,3 +285,26 @@ darkMatterDimension = dimParabolic55
 public export
 primorialBudgetDimension : CosmicDimension
 primorialBudgetDimension = dimPrimorial210
+
+||| Maps each of the 4 fundamental geometries to its certified CosmicDimension Sigma-pair (Rule 03, Item 1 & 7).
+public export
+geometryDimension : FundamentalGeometry -> CosmicDimension
+geometryDimension EllipticGeom   = ellipticDimension
+geometryDimension HyperbolicGeom = hyperbolicDimension
+geometryDimension ParabolicGeom  = darkMatterDimension
+geometryDimension SubstrateGeom  = primorialBudgetDimension
+
+||| Model-indexed GohFuel canonically derived from the certified dimension of the geometry (Rule 04, Item 4).
+public export
+geometryGohFuel : (geom : FundamentalGeometry) -> GohFuel (fst (geometryDimension geom))
+geometryGohFuel geom = gohFuelForDim (geometryDimension geom)
+
+||| Compile-time proof witness certifying capacity grounding for the 4 fundamental geometries:
+||| Elliptic = 27, Hyperbolic = 128, Parabolic = 55, Substrate = 210.
+public export
+0 prfGeometryCapacities : ( fst (geometryDimension EllipticGeom) = 27
+                          , fst (geometryDimension HyperbolicGeom) = 128
+                          , fst (geometryDimension ParabolicGeom) = 55
+                          , fst (geometryDimension SubstrateGeom) = 210
+                          )
+prfGeometryCapacities = (Refl, Refl, Refl, Refl)
