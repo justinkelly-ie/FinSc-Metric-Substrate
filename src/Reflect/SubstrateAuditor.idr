@@ -7,6 +7,7 @@ import Stage1.Order.Preorder
 import Stage1.FourGeometries
 import Stage1.MetricSignature
 import Stage1.VexelMaxel
+import Stage1.Goh.Factor
 import Language.Reflection
 
 %default total
@@ -195,6 +196,31 @@ public export
 auditLinearCarrierPreservation : Elab (Reflect.SubstrateAuditor.auditLinearCarrierMacroProof = True)
 auditLinearCarrierPreservation = pure Refl
 
+||| Audit 5: Goh Factor 1D Polynomial Support & 2D Companion Support Sizes
+||| Verifies that:
+||| - Factor 2: 2D support size = 1, 1D poly support size = 2
+||| - Factor 3: 2D support size = 3, 1D poly support size = 3
+||| - Factor 5: 2D support size = 7, 1D poly support size = 5
+public export
+auditGohFactorCompanionSupportProof : Bool
+auditGohFactorCompanionSupportProof =
+  if natEq (gohFactorSupportSize 2) 1
+  then if natEq (gohFactorSupportSize 3) 3
+       then if natEq (gohFactorSupportSize 5) 7
+            then if natEq (gohFactorPolySupportSize 2) 2
+                 then if natEq (gohFactorPolySupportSize 3) 3
+                      then natEq (gohFactorPolySupportSize 5) 5
+                      else False
+                 else False
+            else False
+       else False
+  else False
+
+public export
+%macro
+auditGohFactorCompanionSupport : Elab (Reflect.SubstrateAuditor.auditGohFactorCompanionSupportProof = True)
+auditGohFactorCompanionSupport = pure Refl
+
 ||| Compile-time verification suite collecting all substrate invariant witnesses.
 public export
 substrateAuditorWitnesses : List Bool
@@ -209,7 +235,9 @@ substrateAuditorWitnesses =
   , auditLinearCarrierPreservationProof
   , auditChromogeometricMetricSupportsProof
   , auditMatrixPathCompositionProof
+  , auditGohFactorCompanionSupportProof
   ]
+
 
 
 

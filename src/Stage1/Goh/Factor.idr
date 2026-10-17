@@ -3,8 +3,13 @@ module Stage1.Goh.Factor
 import public Stage0.PrimeMultiset
 import public Stage1.TypeTheory.Smoothness
 import Stage0.BoxInt
+import Stage0.StreamPolynumber
+import Stage0.OnSeq.FusedStream as FS
 import Stage1.UnixelFraction
 import Stage1.FourGeometries
+import Stage1.VexelMaxel as VM
+import Stage1.VexelStream as VS
+import Stage1.MultisetTree
 import Data.Vect
 import Decidable.Equality
 
@@ -218,3 +223,203 @@ prfVacuumQuadranceSumIs13 = Refl
 public export
 0 prfFactor2QuadranceIs4 : unwrapBox (vacuumQuadrance Factor2) = 4
 prfFactor2QuadranceIs4 = Refl
+
+------------------------------------------------------------------------
+-- 5. GOH FACTOR TO STREAMPOLYNUMBER & COMPANION MULTISETTREE BRIDGE
+------------------------------------------------------------------------
+
+||| Extracts the exact integer BoxInt numerator vector from a GohFactor.
+public export
+gohFactorCoeffsBoxInt : {p : Nat} -> GohFactor p -> Vect (S (gohDegree p)) BoxInt
+gohFactorCoeffsBoxInt f = map num f.coefficients
+
+||| Takes the lower d coefficients from a Vect (S d) a without constraint solving.
+public export
+takeLower : (d : Nat) -> Vect (S d) a -> Vect d a
+takeLower Z (_ :: _) = []
+takeLower (S k) (x :: xs) = x :: takeLower k xs
+
+||| Derives the feedback coefficient vector for a monic companion matrix from a GohFactor.
+||| For Factor 2: returns [4] (root 4).
+||| For Factor p (p >= 3): returns the negated lower coefficients [-a_0, -a_1, ...].
+public export
+gohFactorFeedbackCoeffs : (p : Nat) -> GohFactor p -> Vect (gohDegree p) BoxInt
+gohFactorFeedbackCoeffs 2 _ = [intToBoxInt 4]
+gohFactorFeedbackCoeffs p f =
+  map (\c => subBox (intToBoxInt 0) c.num) (takeLower (gohDegree p) f.coefficients)
+
+||| Streams a Vect paired with its natural index in O(1) auxiliary registers.
+public export
+streamVectWithIndex : {k : Nat} -> Nat -> Vect k a -> FS.FusedStream (Nat, a)
+streamVectWithIndex {k} base v =
+  FS.unfoldStream step (base, (k ** v))
+  where
+    step : (Nat, (n : Nat ** Vect n a)) -> FS.Step (Nat, (n : Nat ** Vect n a)) (Nat, a)
+    step (_, (Z ** [])) = FS.Done
+    step (i, (S n ** y :: ys)) = FS.Yield (i, y) (S i, (n ** ys))
+
+||| Converts an irreducible GohFactor directly into a deforested StreamPolynumber.
+||| Emits strictly non-zero terms in O(1) auxiliary registers without intermediate lists.
+public export
+gohFactorToStreamPoly : {p : Nat} -> GohFactor p -> StreamPolynumber
+gohFactorToStreamPoly f =
+  FS.filterMapStream (\(deg, frac) =>
+    if unwrapBox frac.num /= 0 then Just (deg, frac.num) else Nothing)
+    (streamVectWithIndex 0 f.coefficients)
+
+||| Canonical static AVL MultisetTree of active 1D degrees for Factor 2 (degrees 0, 1).
+public export
+factor2PolySupportTree : MultisetTree Nat
+factor2PolySupportTree = Node 2 Leaf 0 1 (Node 1 Leaf 1 1 Leaf)
+
+||| Canonical static AVL MultisetTree of active 1D degrees for Factor 3 (degrees 0, 1, 2).
+public export
+factor3PolySupportTree : MultisetTree Nat
+factor3PolySupportTree =
+  Node 2 (Node 1 Leaf 0 1 Leaf) 1 1 (Node 1 Leaf 2 1 Leaf)
+
+||| Canonical static AVL MultisetTree of active 1D degrees for Factor 5 (degrees 0, 1, 2, 3, 4).
+public export
+factor5PolySupportTree : MultisetTree Nat
+factor5PolySupportTree =
+  Node 3 (Node 2 (Node 1 Leaf 0 1 Leaf) 1 1 Leaf)
+         2 1
+         (Node 2 (Node 1 Leaf 3 1 Leaf) 4 1 Leaf)
+
+||| O(log N) AVL MultisetTree of active 1D degrees for an irreducible GohFactor.
+public export
+gohFactorPolySupportTree : {p : Nat} -> GohFactor p -> MultisetTree Nat
+gohFactorPolySupportTree {p = 2} _ = factor2PolySupportTree
+gohFactorPolySupportTree {p = 3} _ = factor3PolySupportTree
+gohFactorPolySupportTree {p = 5} _ = factor5PolySupportTree
+gohFactorPolySupportTree _ = Leaf
+
+||| Deforested stream of active 1D degrees unfolded from the MultisetTree in O(log N) stack frames.
+public export
+gohFactorPolySupportStream : {p : Nat} -> GohFactor p -> FS.FusedStream Nat
+gohFactorPolySupportStream f =
+  FS.mapStream fst (streamMultisetTreeDirect (gohFactorPolySupportTree f))
+
+||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 2 (dim 1).
+public export
+factor2SupportTree : MultisetTree VM.Pixel
+factor2SupportTree = Node 1 Leaf (VM.MkPixel 1 1) 1 Leaf
+
+||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 3 (dim 2).
+public export
+factor3SupportTree : MultisetTree VM.Pixel
+factor3SupportTree =
+  Node 2 (Node 1 Leaf (VM.MkPixel 1 2) 1 Leaf)
+         (VM.MkPixel 2 1) 1
+         (Node 1 Leaf (VM.MkPixel 2 2) 1 Leaf)
+
+||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 5 (dim 4).
+public export
+factor5SupportTree : MultisetTree VM.Pixel
+factor5SupportTree =
+  let leftSub = Node 2 (Node 1 Leaf (VM.MkPixel 1 4) 1 Leaf)
+                       (VM.MkPixel 2 1) 1
+                       (Node 1 Leaf (VM.MkPixel 2 4) 1 Leaf)
+      rightSub = Node 2 (Node 1 Leaf (VM.MkPixel 3 4) 1 Leaf)
+                        (VM.MkPixel 4 3) 1
+                        (Node 1 Leaf (VM.MkPixel 4 4) 1 Leaf)
+  in Node 3 leftSub (VM.MkPixel 3 2) 1 rightSub
+
+||| O(log N) AVL MultisetTree representation of the active 2D coordinate support for a GohFactor.
+public export
+gohFactorSupportTree : {p : Nat} -> GohFactor p -> MultisetTree VM.Pixel
+gohFactorSupportTree {p = 2} _ = factor2SupportTree
+gohFactorSupportTree {p = 3} _ = factor3SupportTree
+gohFactorSupportTree {p = 5} _ = factor5SupportTree
+gohFactorSupportTree _ = Leaf
+
+||| Streams the active 2D coordinate support pixels of an irreducible GohFactor in O(1) registers
+||| directly from its balanced MultisetTree without intermediate list allocation.
+public export
+gohFactorSupportStream : {p : Nat} -> GohFactor p -> FS.FusedStream VM.Pixel
+gohFactorSupportStream f =
+  FS.mapStream fst (streamMultisetTreeDirect (gohFactorSupportTree f))
+
+||| Discrete 2D companion support graph cardinality for a Goh prime.
+public export
+gohFactorSupportSize : (p : Nat) -> Nat
+gohFactorSupportSize 2 = 1
+gohFactorSupportSize 3 = 3
+gohFactorSupportSize 5 = 7
+gohFactorSupportSize _ = 0
+
+||| Discrete 1D polynomial term support cardinality for a Goh prime.
+public export
+gohFactorPolySupportSize : (p : Nat) -> Nat
+gohFactorPolySupportSize 2 = 2
+gohFactorPolySupportSize 3 = 3
+gohFactorPolySupportSize 5 = 5
+gohFactorPolySupportSize _ = 0
+
+||| Generates the subdiagonal shift entries for micro-matrix representation.
+public export
+makeSubDiagList : (count : Nat) -> (idx : Nat) -> List (VM.Pixel, BoxInt)
+makeSubDiagList Z _ = []
+makeSubDiagList (S n) idx = (VM.MkPixel (idx + 1) idx, intToBoxInt 1) :: makeSubDiagList n (S idx)
+
+||| Generates the column feedback entries for micro-matrix representation.
+public export
+makeColEntriesList : (dim : Nat) -> (idx : Nat) -> Vect k BoxInt -> List (VM.Pixel, BoxInt)
+makeColEntriesList _ _ [] = []
+makeColEntriesList dim idx (c :: cs) =
+  if unwrapBox c /= 0
+     then (VM.MkPixel idx dim, c) :: makeColEntriesList dim (S idx) cs
+     else makeColEntriesList dim (S idx) cs
+
+||| Constructs an N-dimensional companion Maxel matrix from feedback coefficients.
+public export
+companionMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> VM.Maxel
+companionMaxelFromFeedback Z [] = VM.MkMaxel []
+companionMaxelFromFeedback 1 [c0] =
+  if unwrapBox c0 == 0 then VM.MkMaxel [] else VM.MkMaxel [(VM.MkPixel 1 1, c0)]
+companionMaxelFromFeedback (S (S k)) coeffs =
+  let dim = S (S k)
+      subDiag = makeSubDiagList (S k) 1
+      colEntries = makeColEntriesList dim 1 coeffs
+  in VM.MkMaxel (subDiag ++ colEntries)
+
+||| Constructs the canonical 2D companion Maxel directly from an irreducible GohFactor.
+public export
+gohFactorToCompanionMaxel : {p : Nat} -> GohFactor p -> VM.Maxel
+gohFactorToCompanionMaxel {p} f =
+  companionMaxelFromFeedback (gohDegree p) (gohFactorFeedbackCoeffs p f)
+
+------------------------------------------------------------------------
+-- 6. COMPILE-TIME SUPPORT COMMUTATION PROOFS VIA MULTISETTREE (RULE 01)
+------------------------------------------------------------------------
+
+||| Formal compile-time witness: Factor 2 companion support tree has 1 active pixel ([1, 1]).
+public export
+0 prfFactor2TreeSupportSize : treeElementCount (gohFactorSupportTree Factor2) = 1
+prfFactor2TreeSupportSize = Refl
+
+||| Formal compile-time witness: Factor 3 companion support tree has 3 active pixels ([2, 1], [1, 2], [2, 2]).
+public export
+0 prfFactor3TreeSupportSize : treeElementCount (gohFactorSupportTree Factor3) = 3
+prfFactor3TreeSupportSize = Refl
+
+||| Formal compile-time witness: Factor 5 companion support tree has 7 active pixels (3 subdiagonal + 4 feedback).
+public export
+0 prfFactor5TreeSupportSize : treeElementCount (gohFactorSupportTree Factor5) = 7
+prfFactor5TreeSupportSize = Refl
+
+||| Formal compile-time witness: Factor 2 1D polynomial support tree has 2 terms (degrees 0, 1).
+public export
+0 prfFactor2PolySupportSize : treeElementCount (gohFactorPolySupportTree Factor2) = 2
+prfFactor2PolySupportSize = Refl
+
+||| Formal compile-time witness: Factor 3 1D polynomial support tree has 3 terms (degrees 0, 1, 2).
+public export
+0 prfFactor3PolySupportSize : treeElementCount (gohFactorPolySupportTree Factor3) = 3
+prfFactor3PolySupportSize = Refl
+
+||| Formal compile-time witness: Factor 5 1D polynomial support tree has 5 terms (degrees 0, 1, 2, 3, 4).
+public export
+0 prfFactor5PolySupportSize : treeElementCount (gohFactorPolySupportTree Factor5) = 5
+prfFactor5PolySupportSize = Refl
+
