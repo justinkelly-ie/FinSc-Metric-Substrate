@@ -3,6 +3,7 @@ module Stage1.Topology.Boundaries
 import public Stage0.BoxInt
 import public Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
+import Stage0.StructuralFuel
 import public Stage1.VexelMaxel
 import Data.List
 import Data.Vect
@@ -155,6 +156,17 @@ foldStreamCoboundaryToMultiset : Fuel -> FusedStream (Pixel, BoxInt) -> Multiset
 foldStreamCoboundaryToMultiset f strm =
   foldStreamFuel f (\acc, (p, w) => insertItemBox p w acc) ZeroM strm
 
+||| Folds a deforested coboundary stream into an edge Multiset with Nat steps.
+public export
+foldStreamCoboundaryToMultisetNat : (steps : Nat) -> FusedStream (Pixel, BoxInt) -> Multiset BoxInt Pixel
+foldStreamCoboundaryToMultisetNat steps strm =
+  foldStreamNat steps (\acc, (p, w) => insertItemBox p w acc) ZeroM strm
+
+||| Folds a deforested coboundary stream into an edge Multiset with model-indexed GohFuel.
+public export
+foldStreamCoboundaryToMultisetFuelModel : GohFuel cap -> FusedStream (Pixel, BoxInt) -> Multiset BoxInt Pixel
+foldStreamCoboundaryToMultisetFuelModel fuel = foldStreamCoboundaryToMultisetNat (gohSteps fuel)
+
 ||| Evaluates discrete Poisson-Laplacian Δ(Φ) = ∂₁ (d₀ Φ) directly over an edge stream in a single-pass fold.
 public export
 streamLaplacian0Fuel : Fuel -> FusedStream Pixel -> Multiset BoxInt Unixel -> Multiset BoxInt Unixel
@@ -236,7 +248,7 @@ auditStreamCoboundaryEquivalenceProof =
               (AddM (MkUnixel 2) (intToBoxInt 25)
               (AddM (MkUnixel 3) (intToBoxInt 40) ZeroM))
       listGrad = multisetCoboundary0To1 edges phi
-      strmGrad = foldStreamCoboundaryToMultiset (limit 10) (streamCoboundary0To1 (stream edges) phi)
+      strmGrad = foldStreamCoboundaryToMultisetFuelModel masterSubstrateGohFuelModel (streamCoboundary0To1 (stream edges) phi)
   in listGrad == strmGrad
 
 ||| Rule 01 Compile-Time Invariant Auditing Macro for DEC Nilpotency (d² = 0).
