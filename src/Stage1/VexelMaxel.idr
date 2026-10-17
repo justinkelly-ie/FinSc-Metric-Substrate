@@ -969,7 +969,7 @@ natGcdFuel (S f) a (S b) =
 
 public export
 natGcd : Nat -> Nat -> Nat
-natGcd a b = natGcdFuel (boxNatToNat (gohFuel (S (a + b)))) a b
+natGcd a b = natGcdFuel (gohSteps (gohFuelForCapacity (S (a + b)))) a b
 
 ||| A Balance Array represents a subtraction-free linear relation between n vectors (Vexels).
 ||| Positive side: sum posWeights_i * v_i
