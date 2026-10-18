@@ -10,6 +10,7 @@ import Stage1.MultisetTree
 import Data.List
 import Data.Vect
 import Language.Reflection
+import Stage1.TypeTheory.Staging
 
 %default total
 
@@ -185,6 +186,82 @@ Eq (SquareMaxel dim) where
 public export
 {dim : Nat} -> Show (SquareMaxel dim) where
   show (MkSquareMaxel es) = "SquareMaxel[" ++ show dim ++ "](" ++ show (treeToList es) ++ ")"
+
+------------------------------------------------------------------------
+-- DIMENSION-INDEXED TYPED VEXEL & MAXEL (RULE 03 & 2LTT STAGING)
+------------------------------------------------------------------------
+
+||| A VexelN is a dimension-indexed discrete vector of dimension `n`,
+||| holding `n` BoxInt scalar weights for unrolled 2LTT staging.
+public export
+record VexelN (n : Nat) where
+  constructor MkVexelN
+  components : Vect n BoxInt
+
+public export
+Eq (VexelN n) where
+  (MkVexelN v1) == (MkVexelN v2) = v1 == v2
+
+public export
+{n : Nat} -> Show (VexelN n) where
+  show (MkVexelN v) = "Vexel" ++ show n ++ "(" ++ show v ++ ")"
+
+||| A MaxelN is a dimension-indexed square discrete matrix of dimension `n` x `n`,
+||| holding an n-vector of n-vector BoxInt weights for unrolled 2LTT staging.
+public export
+record MaxelN (n : Nat) where
+  constructor MkMaxelN
+  rows : Vect n (Vect n BoxInt)
+
+public export
+Eq (MaxelN n) where
+  (MkMaxelN m1) == (MkMaxelN m2) = m1 == m2
+
+public export
+{n : Nat} -> Show (MaxelN n) where
+  show (MkMaxelN m) = "Maxel" ++ show n ++ "x" ++ show n ++ "(" ++ show m ++ ")"
+
+||| 2LTT Staged MaxelN-VexelN Contraction:
+||| Multiplies a staged n x n MaxelN by an n-dimensional VexelN in O(1) heap allocations.
+public export
+stagedMaxelNVec : {n : Nat} -> Lift (MaxelN n) -> VexelN n -> Code (VexelN n)
+stagedMaxelNVec qm (MkVexelN v) = quote (MkVexelN (stagedUnrollMatVec (rows (splice qm)) v))
+
+||| 2LTT Staged MaxelN Matrix Multiplication:
+||| Multiplies two staged n x n MaxelN matrices in O(1) heap allocations.
+public export
+stagedMaxelNMul : {n : Nat} -> Lift (MaxelN n) -> Lift (MaxelN n) -> Code (MaxelN n)
+stagedMaxelNMul qm1 qm2 = quote (MkMaxelN (stagedUnrollMatMul (rows (splice qm1)) (rows (splice qm2))))
+
+||| 2LTT Staged MaxelN Identity Matrix of dimension n:
+public export
+stagedIdentityMaxelN : (n : Nat) -> MaxelN n
+stagedIdentityMaxelN n = MkMaxelN (stagedIdentityMat n)
+
+||| 2LTT Staged MaxelN Power in O(log exp) repeated squarings:
+public export
+stagedMaxelNPower : (fuel : Nat) -> {n : Nat} -> Lift (MaxelN n) -> Nat -> Code (MaxelN n)
+stagedMaxelNPower fuel qm exp = quote (MkMaxelN (stagedFastMatPower fuel (rows (splice qm)) exp))
+
+||| Constructor for 2-dimensional VexelN (single qubit state vector).
+public export
+mkVexel2 : BoxInt -> BoxInt -> VexelN 2
+mkVexel2 v0 v1 = MkVexelN [v0, v1]
+
+||| Constructor for 4-dimensional VexelN (two-qubit state vector).
+public export
+mkVexel4 : BoxInt -> BoxInt -> BoxInt -> BoxInt -> VexelN 4
+mkVexel4 v0 v1 v2 v3 = MkVexelN [v0, v1, v2, v3]
+
+||| Constructor for 2x2 MaxelN (single qubit unitary gate).
+public export
+mkMaxel2 : BoxInt -> BoxInt -> BoxInt -> BoxInt -> MaxelN 2
+mkMaxel2 m00 m01 m10 m11 = MkMaxelN [[m00, m01], [m10, m11]]
+
+||| Constructor for 4x4 MaxelN (two-qubit unitary gate).
+public export
+mkMaxel4 : Vect 4 (Vect 4 BoxInt) -> MaxelN 4
+mkMaxel4 rs = MkMaxelN rs
 
 ||| @deprecated Linear O(N) lookupUnixel is suitable for small basis sets.
 ||| For canonical multisets, use canonicalizeVexel or MultisetTree.
@@ -402,6 +479,45 @@ pruneBoxelTerms ((v, w) :: rest) =
 public export
 canonicalizeBoxel : Boxel -> Boxel
 canonicalizeBoxel (MkBoxel voxs) = MkBoxel (multisetToList (fromListBox voxs))
+
+------------------------------------------------------------------------
+-- VEXELN & MAXELN CONVERSION BRIDGES (TO CANONICAL MULTISETS)
+------------------------------------------------------------------------
+
+||| Helper: Converts Vect components into list of Unixel-BoxInt pairs with given starting index.
+vectToUnixelPairsHelper : Nat -> Vect k BoxInt -> List (Unixel, BoxInt)
+vectToUnixelPairsHelper _ [] = []
+vectToUnixelPairsHelper idx (w :: ws) = (MkUnixel idx, w) :: vectToUnixelPairsHelper (S idx) ws
+
+||| Converts a dimension-indexed VexelN into a canonical sparse multiset Vexel (1-indexed).
+public export
+vexelNToVexel : {n : Nat} -> VexelN n -> Vexel
+vexelNToVexel (MkVexelN comps) = canonicalizeVexel (MkVexel (vectToUnixelPairsHelper 1 comps))
+
+||| Converts a dimension-indexed VexelN into a 0-indexed sparse multiset Vexel (quantum basis).
+public export
+vexelNToVexel0 : {n : Nat} -> VexelN n -> Vexel
+vexelNToVexel0 (MkVexelN comps) = canonicalizeVexel (MkVexel (vectToUnixelPairsHelper 0 comps))
+
+||| Helper: Converts a row of Vect components into list of Pixel-BoxInt pairs with given row and start col.
+rowToPixelPairsHelper : Nat -> Nat -> Vect k BoxInt -> List (Pixel, BoxInt)
+rowToPixelPairsHelper _ _ [] = []
+rowToPixelPairsHelper r c (w :: ws) = (MkPixel r c, w) :: rowToPixelPairsHelper r (S c) ws
+
+||| Helper: Converts matrix rows into list of Pixel-BoxInt pairs with given starting row and col index.
+matToPixelPairsHelper : Nat -> Nat -> Vect k (Vect n BoxInt) -> List (Pixel, BoxInt)
+matToPixelPairsHelper _ _ [] = []
+matToPixelPairsHelper r c (row :: rows) = rowToPixelPairsHelper r c row ++ matToPixelPairsHelper (S r) c rows
+
+||| Converts a dimension-indexed MaxelN into a canonical sparse multiset Maxel (1-indexed).
+public export
+maxelNToMaxel : {n : Nat} -> MaxelN n -> Maxel
+maxelNToMaxel (MkMaxelN rs) = canonicalizeMaxel (MkMaxel (matToPixelPairsHelper 1 1 rs))
+
+||| Converts a dimension-indexed MaxelN into a 0-indexed sparse multiset Maxel (quantum basis).
+public export
+maxelNToMaxel0 : {n : Nat} -> MaxelN n -> Maxel
+maxelNToMaxel0 (MkMaxelN rs) = canonicalizeMaxel (MkMaxel (matToPixelPairsHelper 0 0 rs))
 
 ------------------------------------------------------------------------
 -- QTT 0 ERASED ROUND-TRIP INVARIANT PROOFS

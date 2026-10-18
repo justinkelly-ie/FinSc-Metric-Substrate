@@ -5,7 +5,7 @@ import Stage0.BoxInt
 import Stage0.Multiset
 import Stage1.MultisetDuality
 import Stage1.TypeTheory.Staging
-import Stage1.TypeTheory.TwoLevel
+import Stage1.VexelMaxel
 
 %default total
 
@@ -111,3 +111,60 @@ public export
                                 (stencil : GridStencil n a) -> 
                                 extractStencilLinear stencil = focusCell stencil
 verifyStencilComonadIdentity (MkStencil ls c rs) = Refl
+
+--------------------------------------------------------------------------------
+-- 5. STAGED BOUNDARY CONDITIONS & 2LTT STENCIL CONVOLUTIONS
+--------------------------------------------------------------------------------
+
+||| Formalized Boundary Conditions for Staged Stencil Convolutions.
+public export
+data StagedBoundary : Type where
+  PeriodicBoundary  : StagedBoundary
+  DirichletBoundary : BoxInt -> StagedBoundary
+
+||| Looks up a 1D neighbor cell given a boundary condition and coordinate offset.
+public export
+boundaryLookup1D : {n : Nat} -> StagedBoundary -> Vect n BoxInt -> Integer -> BoxInt
+boundaryLookup1D PeriodicBoundary xs idx =
+  case n of
+    Z => intToBoxInt 0
+    (S k) =>
+      let nInt = cast {to = Integer} (S k)
+          modIdx = ((idx `mod` nInt) + nInt) `mod` nInt
+          natIdx = integerToNat modIdx
+      in case natToFin natIdx (S k) of
+           Just finIdx => index finIdx xs
+           Nothing => intToBoxInt 0
+boundaryLookup1D (DirichletBoundary defaultVal) xs idx =
+  if idx < 0 || idx >= cast {to = Integer} n
+     then defaultVal
+     else case natToFin (integerToNat idx) n of
+            Just finIdx => index finIdx xs
+            Nothing => defaultVal
+
+||| Unrolls a 1D 3-point stencil Laplacian (-1, 2, -1) across a VexelN n at Stage 1.
+public export
+stagedLaplacian1D : {n : Nat} -> StagedBoundary -> VexelN n -> Code (VexelN n)
+stagedLaplacian1D bc (MkVexelN comps) =
+  quote (MkVexelN (generateComps 0 comps))
+  where
+    generateComps : Integer -> Vect m BoxInt -> Vect m BoxInt
+    generateComps idx [] = []
+    generateComps idx (c :: rest) =
+      let lVal = boundaryLookup1D bc comps (idx - 1)
+          rVal = boundaryLookup1D bc comps (idx + 1)
+          lap = subBox (mulBox (intToBoxInt 2) c) (addBox lVal rVal)
+      in lap :: generateComps (idx + 1) rest
+
+||| Audit invariant for staged 1D stencil convolution.
+public export
+auditStagedStencil1D : Bool
+auditStagedStencil1D =
+  let v = mkVexel4 (intToBoxInt 10) (intToBoxInt 20) (intToBoxInt 30) (intToBoxInt 40)
+      res = splice (stagedLaplacian1D PeriodicBoundary v)
+  in (index 0 res.components == intToBoxInt (-40)) &&
+     (index 1 res.components == intToBoxInt 0) &&
+     (index 2 res.components == intToBoxInt 0) &&
+     (index 3 res.components == intToBoxInt 40)
+
+
