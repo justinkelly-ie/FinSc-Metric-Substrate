@@ -183,6 +183,60 @@ geometryPrimaryFactor ParabolicGeom  = (5 ** Factor5)
 geometryPrimaryFactor SubstrateGeom  = (7 ** Factor7)
 
 ------------------------------------------------------------------------
+-- 3B. CONSTRUCTIVE COMPOSITE GOH COUPLINGS (35, 55, 39)
+------------------------------------------------------------------------
+
+||| Constructive Composite Goh Coupling Record:
+||| Bundles two constituent Goh primes and their composite product dimension.
+public export
+record GohCompositeCoupling (p : Nat) (q : Nat) (prod : Nat) where
+  constructor MkGohCompositeCoupling
+  constituentP      : GohFactor p
+  constituentQ      : GohFactor q
+  0 productWitness  : GohPrimeProduct p q prod
+  couplingName      : String
+
+||| Composite Coupling 35 (Parabolic-Substrate Ground Coupling):
+||| p = 5 (Parabolic Blue Spread) * q = 7 (Substrate Causal Arrow) = 35.
+||| Coupled with (2 * 3 = 6) yields the Primorial 210 Ground State: 6 * 35 = 210.
+public export
+coupling35ParabolicSubstrate : GohCompositeCoupling 5 7 35
+coupling35ParabolicSubstrate =
+  MkGohCompositeCoupling Factor5 Factor7 gohPrimeProduct5_7 "Parabolic-Substrate Ground Coupling"
+
+||| Composite Coupling 55 (Parabolic Dark Matter Capacity & Triangular Residue):
+||| p = 5 (Parabolic) * q = 11 (Residue Boundary) = 55.
+||| Identically matches the 10th triangular number T_10 = (10 * 11) / 2 = 55.
+public export
+coupling55ParabolicDarkMatter : GohCompositeCoupling 5 11 55
+coupling55ParabolicDarkMatter =
+  MkGohCompositeCoupling Factor5 Factor11 gohPrimeProduct5_11 "Parabolic Dark Matter Capacity (T_10)"
+
+||| Composite Coupling 39 (Observer Epoch Dual-Branch Emergence):
+||| p = 3 (Manifest 3D Grid) * q = 13 (Cosmic Smooth Horizon) = 39.
+||| Matches scale step n = 39 at observer epoch k = 38.
+public export
+coupling39ObserverEpoch : GohCompositeCoupling 3 13 39
+coupling39ObserverEpoch =
+  MkGohCompositeCoupling Factor3 Factor13 gohPrimeProduct3_13 "Observer Epoch Dual-Branch Emergence"
+
+||| Invariant witness: Parabolic-Substrate coupling 35 with (2 * 3 = 6) saturates the Primorial 210 ground state.
+public export
+0 prfCoupling35SaturatesPrimorial210 : (the Nat (6 * 35)) = 210
+prfCoupling35SaturatesPrimorial210 = Refl
+
+||| Invariant witness: Parabolic Dark Matter capacity 55 satisfies the triangular relation 2 * 55 = 10 * 11.
+public export
+0 prfCoupling55TriangularResidue : (the Nat (2 * 55)) = (the Nat (10 * 11))
+prfCoupling55TriangularResidue = Refl
+
+||| Invariant witness: Observer Epoch composite scale 39 matches successor of k = 38.
+public export
+0 prfCoupling39ObserverEpochSuccessor : S 38 = 39
+prfCoupling39ObserverEpochSuccessor = Refl
+
+
+------------------------------------------------------------------------
 -- 4. POLYNOMIAL HORNER EVALUATION & DEFINITIONAL THEOREMS
 ------------------------------------------------------------------------
 

@@ -476,6 +476,36 @@ addBoxSquareMaxel {dim} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
       sumTree = foldBoxTreeL step t1 t2
   in MkBoxSquareMaxel sumTree
 
+||| Sparse Kronecker Tensor Product for BoxSquareMaxel:
+||| Computes A ⊗ B of dimension (m * n) in O(K1 * K2 log(m * n)) time,
+||| iterating strictly over the non-zero active support of both operands.
+public export
+kroneckerBoxSquareMaxel : {m, n : Nat} -> BoxSquareMaxel m -> BoxSquareMaxel n -> BoxSquareMaxel (m * n)
+kroneckerBoxSquareMaxel {m} {n} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
+  let entries1 = boxTreeToList t1
+      entries2 = boxTreeToList t2
+      step1 : BoxMultisetTree Pixel -> (Pixel, BoxInt) -> BoxMultisetTree Pixel
+      step1 treeAcc (MkPixel r1 c1, w1) =
+        foldl (\acc, (MkPixel r2 c2, w2) =>
+                let rOut = (r1 * n) + r2
+                    cOut = (c1 * n) + c2
+                    wOut = w1 * w2
+                    pOut = MkPixel rOut cOut
+                in if unwrapBox wOut == 0
+                     then acc
+                     else setBoxTree pOut wOut acc)
+              treeAcc
+              entries2
+      resultTree = foldl step1 BoxLeaf entries1
+  in MkBoxSquareMaxel resultTree
+
+||| 2LTT Staged Sparse Kronecker Tensor Product:
+||| Quotes compile-time evaluation of the tensor product of two sparse matrices.
+public export
+stagedKroneckerBoxSquareMaxel : {m, n : Nat} -> Lift (BoxSquareMaxel m) -> Lift (BoxSquareMaxel n) -> Code (BoxSquareMaxel (m * n))
+stagedKroneckerBoxSquareMaxel qm1 qm2 = quote (kroneckerBoxSquareMaxel (splice qm1) (splice qm2))
+
+
 
 
 ||| Constructor for 2-dimensional VexelN (single qubit state vector).
