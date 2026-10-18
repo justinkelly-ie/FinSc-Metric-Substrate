@@ -81,6 +81,13 @@ public export
 Show Pixel where
   show (MkPixel r c) = "[" ++ show r ++ ", " ++ show c ++ "]"
 
+||| Multiplies a Pixel by a Pixel (discrete matrix basis multiplication).
+||| [i, j] * [k, l] = [i, l] if j == k, otherwise Nothing.
+public export
+mulPixel : Pixel -> Pixel -> Maybe Pixel
+mulPixel (MkPixel i j) (MkPixel k l) =
+  if j == k then Just (MkPixel i l) else Nothing
+
 ||| A Voxel is a 3-list from Nat [x, y, z], representing a 3D coordinate cell or Triplet Codon / Baryon state.
 public export
 record Voxel where
@@ -320,6 +327,131 @@ maxelNToSquareMaxel {dim} (MkMaxelN rs) =
   let indexedRows = zip (allFins dim) rs
       t = foldl insertMatrixPixels Leaf indexedRows
   in MkSquareMaxel t
+
+------------------------------------------------------------------------
+-- SIGNED DIMENSION-INDEXED SPARSE MATRIX (RULE 03 & RULE 04)
+------------------------------------------------------------------------
+
+||| A BoxSquareMaxel is a square discrete matrix of dimension `dim`,
+||| holding arbitrary signed BoxInt scalar weights backed by an AVL BoxMultisetTree of Pixels.
+||| Executes matrix-vector contraction in O(K + dim) time, where K is the number of non-zero entries.
+public export
+record BoxSquareMaxel (dim : Nat) where
+  constructor MkBoxSquareMaxel
+  entries : BoxMultisetTree Pixel
+
+public export
+Eq (BoxSquareMaxel dim) where
+  (MkBoxSquareMaxel e1) == (MkBoxSquareMaxel e2) = e1 == e2
+
+public export
+{dim : Nat} -> Show (BoxSquareMaxel dim) where
+  show (MkBoxSquareMaxel es) = "BoxSquareMaxel[" ++ show dim ++ "](" ++ show (boxTreeToList es) ++ ")"
+
+||| Constructs a dimension-indexed identity BoxSquareMaxel of size `dim` in O(dim log dim).
+public export
+identityBoxSquareMaxel : (dim : Nat) -> BoxSquareMaxel dim
+identityBoxSquareMaxel dim =
+  case dim of
+    Z => MkBoxSquareMaxel BoxLeaf
+    _ => let pxs = [MkPixel i i | i <- [0..pred dim]]
+             t   = foldl (\tree, p => setBoxTree p (intToBoxInt 1) tree) BoxLeaf pxs
+         in MkBoxSquareMaxel t
+
+||| Accumulator step for signed sparse-dense matrix-vector contraction:
+||| Adds (w * vCol) to the target row accumulator.
+public export
+sparseDenseAccumStepBox : (dim : Nat) -> Vect dim BoxInt -> Vect dim BoxInt -> Pixel -> BoxInt -> Vect dim BoxInt
+sparseDenseAccumStepBox dim vec acc (MkPixel r c) w =
+  case (natToFin r dim, natToFin c dim) of
+    (Just rFin, Just cFin) =>
+      let vCol = index cFin vec
+          term = mulBox w vCol
+      in updateVectAt rFin (\curr => addBox curr term) acc
+    _ => acc
+
+||| Directly contracts a sparse BoxSquareMaxel with a dense VexelN in O(K + dim) steps,
+||| visiting only the K active non-zero coordinate pixels.
+public export
+contractBoxSquareDense : {dim : Nat} -> BoxSquareMaxel dim -> VexelN dim -> VexelN dim
+contractBoxSquareDense {dim} (MkBoxSquareMaxel tree) (MkVexelN vec) =
+  let initAcc = replicate dim (intToBoxInt 0)
+      foldedAcc = foldBoxTreeL (\acc, (p, w) => sparseDenseAccumStepBox dim vec acc p w) initAcc tree
+  in MkVexelN foldedAcc
+
+||| 2LTT Staged Sparse-Dense Contraction for BoxSquareMaxel:
+||| Evaluates sparse BoxSquareMaxel contraction with dense VexelN in O(K + dim) steps.
+public export
+stagedContractBoxSquareDense : {dim : Nat} -> Lift (BoxSquareMaxel dim) -> VexelN dim -> Code (VexelN dim)
+stagedContractBoxSquareDense qm v = quote (contractBoxSquareDense (splice qm) v)
+
+||| Helper inserting non-zero row elements into a BoxMultisetTree Pixel.
+public export
+insertRowBoxPixels : {dim : Nat} -> Fin dim -> BoxMultisetTree Pixel -> (Fin dim, BoxInt) -> BoxMultisetTree Pixel
+insertRowBoxPixels rFin treeAcc (cFin, w) =
+  if unwrapBox w == 0 then treeAcc
+  else setBoxTree (MkPixel (finToNat rFin) (finToNat cFin)) w treeAcc
+
+||| Helper inserting all non-zero matrix elements of a row into a BoxMultisetTree Pixel.
+public export
+insertMatrixBoxPixels : {dim : Nat} -> BoxMultisetTree Pixel -> (Fin dim, Vect dim BoxInt) -> BoxMultisetTree Pixel
+insertMatrixBoxPixels {dim} treeAcc (rFin, row) =
+  foldl (insertRowBoxPixels rFin) treeAcc (zip (allFins dim) row)
+
+||| Sparse conversion of a dense MaxelN of size `dim` into a sparse BoxSquareMaxel.
+public export
+maxelNToBoxSquareMaxel : {dim : Nat} -> MaxelN dim -> BoxSquareMaxel dim
+maxelNToBoxSquareMaxel {dim} (MkMaxelN rs) =
+  let indexedRows = zip (allFins dim) rs
+      t = foldl insertMatrixBoxPixels BoxLeaf indexedRows
+  in MkBoxSquareMaxel t
+
+||| Accumulator step for converting sparse BoxSquareMaxel tree entries into dense MaxelN rows.
+public export
+boxSquareMaxelToMaxelNStep : (dim : Nat) -> Vect dim (Vect dim BoxInt) -> Pixel -> BoxInt -> Vect dim (Vect dim BoxInt)
+boxSquareMaxelToMaxelNStep dim acc (MkPixel r c) w =
+  case (natToFin r dim, natToFin c dim) of
+    (Just rFin, Just cFin) =>
+      updateVectAt rFin (updateVectAt cFin (\curr => addBox curr w)) acc
+    _ => acc
+
+||| Dense conversion of a sparse BoxSquareMaxel of size `dim` into a dense MaxelN.
+public export
+boxSquareMaxelToMaxelN : (dim : Nat) -> BoxSquareMaxel dim -> MaxelN dim
+boxSquareMaxelToMaxelN dim (MkBoxSquareMaxel tree) =
+  let zeroRow = replicate dim (intToBoxInt 0)
+      initRows = replicate dim zeroRow
+      foldedRows = foldBoxTreeL (\acc, (p, w) => boxSquareMaxelToMaxelNStep dim acc p w) initRows tree
+  in MkMaxelN foldedRows
+
+||| Dimension-checked sparse matrix multiplication for BoxSquareMaxel:
+||| Multiplies two sparse matrices via basis contraction in O(K1 * K2 log dim).
+public export
+mulBoxSquareMaxel : {dim : Nat} -> BoxSquareMaxel dim -> BoxSquareMaxel dim -> BoxSquareMaxel dim
+mulBoxSquareMaxel {dim} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
+  let entries1 = boxTreeToList t1
+      entries2 = boxTreeToList t2
+      step1 : BoxMultisetTree Pixel -> (Pixel, BoxInt) -> BoxMultisetTree Pixel
+      step1 treeAcc (p1, w1) =
+        foldl (\acc, (p2, w2) =>
+                case mulPixel p1 p2 of
+                  Just pOut =>
+                    let current = lookupBoxTree pOut acc
+                        newWeight = current + (w1 * w2)
+                    in if unwrapBox newWeight == 0
+                         then acc
+                         else setBoxTree pOut newWeight acc
+                  Nothing => acc)
+              treeAcc
+              entries2
+      resultTree = foldl step1 BoxLeaf entries1
+  in MkBoxSquareMaxel resultTree
+
+||| 2LTT Staged Sparse Matrix Multiplication for BoxSquareMaxel:
+||| Quotes compile-time sparse multiplication of two BoxSquareMaxel gates.
+public export
+stagedComposeBoxSquareMaxel : {dim : Nat} -> Lift (BoxSquareMaxel dim) -> Lift (BoxSquareMaxel dim) -> Code (BoxSquareMaxel dim)
+stagedComposeBoxSquareMaxel qm1 qm2 = quote (mulBoxSquareMaxel (splice qm1) (splice qm2))
 
 
 ||| Constructor for 2-dimensional VexelN (single qubit state vector).
@@ -721,12 +853,6 @@ prfBoxelMultisetRoundTrip (MkBoxel voxs) = Refl
 --    [i, j] * [k, l] = [i, l] if j == k else blank
 ------------------------------------------------------------------------
 
-||| Multiplies a Pixel by a Pixel (discrete matrix basis multiplication).
-||| [i, j] * [k, l] = [i, l] if j == k, otherwise Nothing.
-public export
-mulPixel : Pixel -> Pixel -> Maybe Pixel
-mulPixel (MkPixel i j) (MkPixel k l) =
-  if j == k then Just (MkPixel i l) else Nothing
 
 ||| Multiplies a Unixel on the left by a Pixel (Row extraction filter).
 public export
