@@ -478,6 +478,25 @@ addBoxSquareMaxel {dim} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
       sumTree = foldBoxTreeL step t1 t2
   in MkBoxSquareMaxel sumTree
 
+||| Evaluates M^exp for a sparse BoxSquareMaxel via fast repeated squaring in O(log exp * dim^2).
+public export
+fastBoxSquareMaxelPower : {dim : Nat} -> (fuel : Nat) -> (exp : Nat) -> BoxSquareMaxel dim -> BoxSquareMaxel dim
+fastBoxSquareMaxelPower {dim} _ Z _ = identityBoxSquareMaxel dim
+fastBoxSquareMaxelPower {dim} _ (S Z) m = m
+fastBoxSquareMaxelPower {dim} fuel exp m =
+  loop fuel exp m (identityBoxSquareMaxel dim)
+  where
+    loop : Nat -> Nat -> BoxSquareMaxel dim -> BoxSquareMaxel dim -> BoxSquareMaxel dim
+    loop Z _ _ acc = acc
+    loop (S f) e base acc =
+      if e == 0 then acc
+      else
+        let isOdd = (cast {to = Integer} e `mod` 2) == 1
+            acc' = if isOdd then mulBoxSquareMaxel acc base else acc
+            base' = mulBoxSquareMaxel base base
+            nextE = e `div` 2
+        in loop f nextE base' acc'
+
 ||| Canonical Kronecker Coordinate Chart Observation:
 ||| Maps a pair of row indices and pair of column indices ((r1, r2), (c1, c2))
 ||| to the composite Pixel coordinate via the linear bijection (Fin m * Fin n) -> Fin (m * n).
@@ -528,19 +547,17 @@ tensorToBoxSquareMaxel m =
 public export
 kroneckerBoxSquareMaxel : {m, n : Nat} -> BoxSquareMaxel m -> BoxSquareMaxel n -> BoxSquareMaxel (m * n)
 kroneckerBoxSquareMaxel {m} {n} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
-  let entries1 = boxTreeToList t1
-      entries2 = boxTreeToList t2
-      step1 : BoxMultisetTree Pixel -> (Pixel, BoxInt) -> BoxMultisetTree Pixel
-      step1 treeAcc (MkPixel r1 c1, w1) =
-        foldl (\acc, (MkPixel r2 c2, w2) =>
-                let pOut = observeKroneckerPixel n ((r1, r2), (c1, c2))
-                    wOut = w1 * w2
-                in if unwrapBox wOut == 0
-                     then acc
-                     else setBoxTree pOut wOut acc)
-              treeAcc
-              entries2
-      resultTree = foldl step1 BoxLeaf entries1
+  let resultTree = foldBoxTreeL (\accTree, (MkPixel r1 c1, w1) =>
+        foldBoxTreeL (\innerAcc, (MkPixel r2 c2, w2) =>
+          let pOut = observeKroneckerPixel n ((r1, r2), (c1, c2))
+              wOut = w1 * w2
+          in if unwrapBox wOut == 0
+               then innerAcc
+               else setBoxTree pOut wOut innerAcc)
+          accTree
+          t2)
+        BoxLeaf
+        t1
   in MkBoxSquareMaxel resultTree
 
 ||| Algebraic Kronecker Tensor Product on BoxSquareMaxel:

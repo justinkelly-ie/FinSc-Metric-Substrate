@@ -110,6 +110,14 @@ public export
 stagedIdentityMetricTensor : (dim : Nat) -> Code (SymmetricMetricTensor dim)
 stagedIdentityMetricTensor dim = quote (identityMetricTensor dim)
 
+||| Perturbs the (0, 0) timelike metric entry with energy-momentum curvature back-reaction.
+public export
+perturbMetric00 : {dim : Nat} -> SymmetricMetricTensor dim -> BoxInt -> SymmetricMetricTensor dim
+perturbMetric00 (MkSymmetricMetricTensor (MkBoxSquareMaxel tree)) defect =
+  let cur = lookupBoxTree (MkPixel 0 0) tree
+      newTree = setBoxTree (MkPixel 0 0) (cur + defect) tree
+  in MkSymmetricMetricTensor (MkBoxSquareMaxel newTree)
+
 ------------------------------------------------------------------------
 -- 4. 10D CANONICAL TERM INSTANTIATION & GOH SPECTRUM
 ------------------------------------------------------------------------
