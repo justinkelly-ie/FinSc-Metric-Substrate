@@ -28,7 +28,7 @@ import public Stage1.Topology.Boundaries
 import public Stage1.Topology.Peaks
 import public Stage1.Topology.PersistenceStream
 import public Stage1.PhysicalUniverse.Stratification
-import public Stage1.Spacetime10D
+import public Stage1.SymmetricMetricTensor
 
 import public Reflect.SubstrateAuditor
 

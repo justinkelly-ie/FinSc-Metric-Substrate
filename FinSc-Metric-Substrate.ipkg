@@ -36,6 +36,5 @@ modules = MetricSubstrate,
           Stage1.PhysicalUniverse.Stratification,
           Stage1.SubstrateRepIso,
           Stage1.SymmetricMetricTensor,
-          Stage1.Spacetime10D,
 
           Reflect.SubstrateAuditor
