@@ -101,14 +101,14 @@ generateSpreadPoly n = toVectExact (S n) (spreadList n)
 public export
 generateSpreadPolyStream : (n : Nat) -> FS.FusedStream (Nat, BoxInt)
 generateSpreadPolyStream n =
-  let coeffs = spreadList n
-      indexed = zipWithIndex 0 coeffs
-  in FS.filterMapStream (\(deg, c) => if boxIsNonZero c then Just (deg, c) else Nothing)
-                        (FS.stream indexed)
+  FS.unfoldStream nextStep (0, spreadList n)
   where
-    zipWithIndex : Nat -> List a -> List (Nat, a)
-    zipWithIndex _ [] = []
-    zipWithIndex idx (x :: xs) = (idx, x) :: zipWithIndex (S idx) xs
+    nextStep : (Nat, List BoxInt) -> FS.Step (Nat, List BoxInt) (Nat, BoxInt)
+    nextStep (_, []) = FS.Done
+    nextStep (idx, c :: cs) =
+      if boxIsNonZero c
+        then FS.Yield (idx, c) (S idx, cs)
+        else FS.Skip (S idx, cs)
 
 ------------------------------------------------------------------------
 -- 3. RELATIVISTIC TRIPLE SPREAD LAW (WILDBERGER RRR 3)
