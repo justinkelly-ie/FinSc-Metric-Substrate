@@ -660,6 +660,7 @@ public export
 lookupSparseVexel : Unixel -> SparseVexel -> BoxInt
 lookupSparseVexel u (MkSparseVexel t) = natToBoxInt (lookupTokenTree u t)
 
+
 ------------------------------------------------------------------------
 -- DIMENSION-MULTIPLYING KRONECKER TENSOR OPERATORS (RULE 03 & 2LTT)
 ------------------------------------------------------------------------

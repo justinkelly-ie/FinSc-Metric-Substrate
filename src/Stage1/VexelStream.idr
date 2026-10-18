@@ -21,7 +21,14 @@ streamVexel v = FS.multisetToStream (VM.vexelToMultiset v)
 ||| Deforested FusedStream view of an AVL MultisetTree-backed SparseVexel vector.
 public export
 streamSparseVexel : VM.SparseVexel -> FS.FusedStream (VM.Unixel, BoxInt)
-streamSparseVexel sv = streamVexel (VM.sparseVexelToVexel sv)
+streamSparseVexel (VM.MkSparseVexel t) =
+  FS.mapStream (\pair => let (u, cnt) = pair in (u, natToBoxInt cnt)) (MT.streamMultisetTreeDirect t)
+
+||| Deforested FusedStream view of an AVL MultisetTree-backed SquareMaxel matrix.
+public export
+streamSquareMaxel : VM.SquareMaxel dim -> FS.FusedStream (VM.Pixel, BoxInt)
+streamSquareMaxel (VM.MkSquareMaxel t) =
+  FS.mapStream (\pair => let (p, cnt) = pair in (p, natToBoxInt cnt)) (MT.streamMultisetTreeDirect t)
 
 ||| Deforested FusedStream view of a Maxel matrix.
 public export
@@ -33,25 +40,48 @@ public export
 streamBoxel : VM.Boxel -> FS.FusedStream (VM.Voxel, BoxInt)
 streamBoxel b = FS.multisetToStream (VM.boxelToMultiset b)
 
+||| Folds a FusedStream directly into an AVL MultisetTree-backed SparseVexel under BoxNat fuel bounds,
+||| with zero intermediate List allocations.
+public export
+streamToSparseVexelBoxNat : BoxNat -> FS.FusedStream (VM.Unixel, BoxInt) -> VM.SparseVexel
+streamToSparseVexelBoxNat fuel strm =
+  let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
+            let (u, w) = pair
+            in if unwrapBox w == 0 then tree
+               else MT.insertTokenTree u (boxToNat w) tree
+          ) MT.Leaf strm
+  in VM.MkSparseVexel t
+
+||| Folds a FusedStream directly into an AVL MultisetTree-backed SquareMaxel under BoxNat fuel bounds.
+public export
+streamToSquareMaxelBoxNat : {dim : Nat} -> BoxNat -> FS.FusedStream (VM.Pixel, BoxInt) -> VM.SquareMaxel dim
+streamToSquareMaxelBoxNat fuel strm =
+  let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
+            let (p, w) = pair
+            in if unwrapBox w == 0 then tree
+               else MT.insertTokenTree p (boxToNat w) tree
+          ) MT.Leaf strm
+  in VM.MkSquareMaxel t
+
 ||| Folds a FusedStream into a Vexel under BoxNat fuel bounds.
 public export
 streamToVexelBoxNat : BoxNat -> FS.FusedStream (VM.Unixel, BoxInt) -> VM.Vexel
 streamToVexelBoxNat fuel strm =
-  let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, (u, w) => insertItemBox u w acc) ZeroM strm
+  let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, pair => let (u, w) = pair in insertItemBox u w acc) ZeroM strm
   in VM.multisetToVexel m
 
 ||| Folds a FusedStream into a Maxel under BoxNat fuel bounds.
 public export
 streamToMaxelBoxNat : BoxNat -> FS.FusedStream (VM.Pixel, BoxInt) -> VM.Maxel
 streamToMaxelBoxNat fuel strm =
-  let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, (p, w) => insertItemBox p w acc) ZeroM strm
+  let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, pair => let (p, w) = pair in insertItemBox p w acc) ZeroM strm
   in VM.multisetToMaxel m
 
 ||| Folds a FusedStream into a Boxel under BoxNat fuel bounds.
 public export
 streamToBoxelBoxNat : BoxNat -> FS.FusedStream (VM.Voxel, BoxInt) -> VM.Boxel
 streamToBoxelBoxNat fuel strm =
-  let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, (v, w) => insertItemBox v w acc) ZeroM strm
+  let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, pair => let (v, w) = pair in insertItemBox v w acc) ZeroM strm
   in VM.multisetToBoxel m
 
 ------------------------------------------------------------------------
@@ -110,7 +140,30 @@ mulMaxelStream leftStream rightStream =
       case VM.mulPixel p1 p2 of
         Just pOut => Just (pOut, w1 * w2)
         Nothing   => Nothing) rightStream) leftStream
+------------------------------------------------------------------------
+-- UNIFIED SPARSE CARRIER INTERFACE (PHASE 3)
+-- Bridges AVL MultisetTree storage and FusedStream pipelines uniformly.
+------------------------------------------------------------------------
 
+||| Common interface for geometric sparse multiset carriers backed by AVL trees.
+public export
+interface SparseCarrier c coord | c where
+  toTree : c -> MT.MultisetTree coord
+  fromTree : MT.MultisetTree coord -> c
+  toStream : c -> FS.FusedStream (coord, BoxInt)
+  fromStream : BoxNat -> FS.FusedStream (coord, BoxInt) -> c
 
+public export
+SparseCarrier VM.SparseVexel VM.Unixel where
+  toTree (VM.MkSparseVexel t) = t
+  fromTree t = VM.MkSparseVexel t
+  toStream = streamSparseVexel
+  fromStream = streamToSparseVexelBoxNat
 
+public export
+{dim : Nat} -> SparseCarrier (VM.SquareMaxel dim) VM.Pixel where
+  toTree (VM.MkSquareMaxel t) = t
+  fromTree t = VM.MkSquareMaxel t
+  toStream = streamSquareMaxel
+  fromStream = streamToSquareMaxelBoxNat
 
