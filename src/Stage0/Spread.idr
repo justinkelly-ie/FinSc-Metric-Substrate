@@ -103,7 +103,7 @@ generateSpreadPolyStream : (n : Nat) -> FS.FusedStream (Nat, BoxInt)
 generateSpreadPolyStream n =
   let coeffs = spreadList n
       indexed = zipWithIndex 0 coeffs
-  in FS.filterMapStream (\(deg, c) => if unwrapBox c /= 0 then Just (deg, c) else Nothing)
+  in FS.filterMapStream (\(deg, c) => if boxIsNonZero c then Just (deg, c) else Nothing)
                         (FS.stream indexed)
   where
     zipWithIndex : Nat -> List a -> List (Nat, a)

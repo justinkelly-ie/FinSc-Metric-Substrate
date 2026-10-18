@@ -96,10 +96,9 @@ fastDihedronPower Z _ _ = identityDihedron2
 fastDihedronPower (S _) _ Z = identityDihedron2
 fastDihedronPower (S _) d (S Z) = d
 fastDihedronPower (S f) d exp =
-  let half = integerToNat (cast {to = Integer} exp `div` 2)
+  let (half, isOdd) = natHalfAndOdd exp
       halfD = fastDihedronPower f d half
       squared = mulDihedron2 halfD halfD
-      isOdd = (cast {to = Integer} exp `mod` 2) == 1
   in if isOdd then mulDihedron2 d squared else squared
 
 ------------------------------------------------------------------------

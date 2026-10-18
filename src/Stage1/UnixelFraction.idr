@@ -45,6 +45,12 @@ mkUnixelFraction : BoxInt -> Nat -> UnixelFraction
 mkUnixelFraction n Z     = MkUnixelFraction n (MkUnixel 1)
 mkUnixelFraction n (S k) = MkUnixelFraction n (MkUnixel (S k))
 
+||| Smart constructor building a UnixelFraction directly from BoxInt numerator and denominator,
+||| safely clamping non-positive denominators to 1.
+public export
+mkUnixelFractionBox : BoxInt -> BoxInt -> UnixelFraction
+mkUnixelFractionBox n d = mkUnixelFraction n (boxIntToPositiveNat d)
+
 ||| Canonical zero fraction: 0 / [1]
 public export
 zeroUnixelFraction : UnixelFraction

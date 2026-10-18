@@ -57,7 +57,7 @@ MetricSignature : Type
 MetricSignature = Box BasisWeight
 
 ||| Monomorphic lookup of token multiplicity avoiding typeclass dictionary stalls.
-%inline public export
+public export
 lookupWeight : BasisWeight -> MetricSignature -> BoxInt
 lookupWeight _ (MkBox []) = MkBoxInt 0
 lookupWeight target (MkBox ((w, c) :: rest)) =
