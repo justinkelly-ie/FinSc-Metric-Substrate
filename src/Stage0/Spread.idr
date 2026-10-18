@@ -2,8 +2,8 @@ module Stage0.Spread
 
 import Data.Vect
 import Stage0.BoxInt
-
 import Stage0.Multiset
+import Stage0.OnSeq.FusedStream as FS
 
 %default total
 
@@ -95,6 +95,20 @@ toVectExact (S k) (x :: xs) = x :: toVectExact k xs
 public export
 generateSpreadPoly : (n : Nat) -> Vect (S n) BoxInt
 generateSpreadPoly n = toVectExact (S n) (spreadList n)
+
+||| Generates the deforested stream of active non-zero spread polynomial coefficients (degree, coefficient).
+||| Avoids materializing dense vector buffers or intermediate lists.
+public export
+generateSpreadPolyStream : (n : Nat) -> FS.FusedStream (Nat, BoxInt)
+generateSpreadPolyStream n =
+  let coeffs = spreadList n
+      indexed = zipWithIndex 0 coeffs
+  in FS.filterMapStream (\(deg, c) => if unwrapBox c /= 0 then Just (deg, c) else Nothing)
+                        (FS.stream indexed)
+  where
+    zipWithIndex : Nat -> List a -> List (Nat, a)
+    zipWithIndex _ [] = []
+    zipWithIndex idx (x :: xs) = (idx, x) :: zipWithIndex (S idx) xs
 
 ------------------------------------------------------------------------
 -- 3. RELATIVISTIC TRIPLE SPREAD LAW (WILDBERGER RRR 3)

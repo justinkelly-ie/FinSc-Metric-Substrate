@@ -258,14 +258,14 @@ auditStagedStencil2D =
 ||| lap(x) = 2 * c(x) - c(x-1) - c(x+1).
 ||| Lookups and insertions run in O(log N) time with zero allocation for vacuum nodes.
 public export
-laplacianTree1D : BoxMultisetTree Integer -> BoxMultisetTree Integer
+laplacianTree1D : BoxMultisetTree BoxInt -> BoxMultisetTree BoxInt
 laplacianTree1D tree =
-  let candidates = foldBoxTreeR (\x, _, acc => the (List Integer) ((x - 1) :: x :: (x + 1) :: acc))
-                                (the (List Integer) [])
+  let candidates = foldBoxTreeR (\x, _, acc => the (List BoxInt) ((x - 1) :: x :: (x + 1) :: acc))
+                                (the (List BoxInt) [])
                                 tree
   in foldl updatePoint BoxLeaf candidates
   where
-    updatePoint : BoxMultisetTree Integer -> Integer -> BoxMultisetTree Integer
+    updatePoint : BoxMultisetTree BoxInt -> BoxInt -> BoxMultisetTree BoxInt
     updatePoint acc x =
       let cVal = lookupBoxTree x tree
           lVal = lookupBoxTree (x - 1) tree
@@ -277,21 +277,21 @@ laplacianTree1D tree =
 
 ||| 2LTT Staged 1D MultisetTree Stencil Convolution.
 public export
-stagedLaplacianTree1D : Lift (BoxMultisetTree Integer) -> Code (BoxMultisetTree Integer)
+stagedLaplacianTree1D : Lift (BoxMultisetTree BoxInt) -> Code (BoxMultisetTree BoxInt)
 stagedLaplacianTree1D qTree = quote (laplacianTree1D (splice qTree))
 
 ||| Evaluates 2D 5-point discrete Laplacian stencil (4*c - l - r - u - d) over 2D BoxMultisetTree.
 public export
-laplacianTree2D : BoxMultisetTree (Integer, Integer) -> BoxMultisetTree (Integer, Integer)
+laplacianTree2D : BoxMultisetTree (BoxInt, BoxInt) -> BoxMultisetTree (BoxInt, BoxInt)
 laplacianTree2D tree =
   let candidates = foldBoxTreeR (\(x, y), _, acc =>
-                                  the (List (Integer, Integer))
+                                  the (List (BoxInt, BoxInt))
                                     ((x, y) :: (x - 1, y) :: (x + 1, y) :: (x, y - 1) :: (x, y + 1) :: acc))
-                                (the (List (Integer, Integer)) [])
+                                (the (List (BoxInt, BoxInt)) [])
                                 tree
   in foldl updatePoint BoxLeaf candidates
   where
-    updatePoint : BoxMultisetTree (Integer, Integer) -> (Integer, Integer) -> BoxMultisetTree (Integer, Integer)
+    updatePoint : BoxMultisetTree (BoxInt, BoxInt) -> (BoxInt, BoxInt) -> BoxMultisetTree (BoxInt, BoxInt)
     updatePoint acc pt@(x, y) =
       let cVal = lookupBoxTree pt tree
           lVal = lookupBoxTree (x - 1, y) tree
@@ -309,7 +309,7 @@ laplacianTree2D tree =
 public export
 auditTreeStencilProof : Bool
 auditTreeStencilProof =
-  let t0 : BoxMultisetTree Integer = setBoxTree 0 (intToBoxInt 1) BoxLeaf
+  let t0 : BoxMultisetTree BoxInt = setBoxTree 0 (intToBoxInt 1) BoxLeaf
       res = laplacianTree1D t0
       c0  = lookupBoxTree 0 res
       cm1 = lookupBoxTree (-1) res
