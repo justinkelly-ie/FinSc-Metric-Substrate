@@ -1,11 +1,14 @@
 module Stage1.VexelStream
 
+import Data.Vect
 import Stage0.BoxInt
 import Stage0.BoxNat
 import Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
 import Stage1.MultisetTree as MT
 import Stage1.VexelMaxel as VM
+import Stage1.ProjectiveRotation as PR
+import Stage1.DihedronModel as DM
 
 %default total
 
@@ -166,4 +169,24 @@ public export
   fromTree t = VM.MkSquareMaxel t
   toStream = streamSquareMaxel
   fromStream = streamToSquareMaxelBoxNat
+
+------------------------------------------------------------------------
+-- DEFORESTED PROJECTIVE ROTATION & VELOCITY ADDITION STREAMS (PHASE 3)
+------------------------------------------------------------------------
+
+||| Deforested stream transformer rotating a stream of 3D Vexel vectors in O(1) auxiliary registers.
+public export
+streamRotateVexelN3 : PR.ProjectiveProportion -> FS.FusedStream (VM.VexelN 3) -> FS.FusedStream (VM.VexelN 3)
+streamRotateVexelN3 prop =
+  FS.mapStream (PR.rotateVexelN3 prop)
+
+||| Deforested stream transformer accumulating relativistic velocities:
+||| v_total = v_n (+) ... (+) v_1 using exact Wildberger anchor product addition.
+public export
+streamAccumulateVelocities : FS.FusedStream (Vect 3 BoxInt) -> FS.FusedStream (Vect 3 BoxInt, BoxInt)
+streamAccumulateVelocities strm =
+  FS.scanStream (\acc, u =>
+    let (v, den) = acc
+    in DM.velocityAdditionComponents v u
+  ) ([0, 0, 0], 1) strm
 
