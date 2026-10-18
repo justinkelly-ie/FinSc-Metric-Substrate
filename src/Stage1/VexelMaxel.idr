@@ -243,6 +243,85 @@ public export
 stagedMaxelNPower : (fuel : Nat) -> {n : Nat} -> Lift (MaxelN n) -> Nat -> Code (MaxelN n)
 stagedMaxelNPower fuel qm exp = quote (MkMaxelN (stagedFastMatPower fuel (rows (splice qm)) exp))
 
+------------------------------------------------------------------------
+-- DIRECT SPARSE-DENSE CONTRACTION & BRIDGES (PHASE 1)
+------------------------------------------------------------------------
+
+||| In-place vector update function for VexelN / Vect accumulators.
+public export
+updateVectAt : Fin n -> (a -> a) -> Vect n a -> Vect n a
+updateVectAt FZ     f (x :: xs) = f x :: xs
+updateVectAt (FS k) f (x :: xs) = x :: updateVectAt k f xs
+
+||| Accumulator step for sparse-dense matrix-vector contraction:
+||| Adds the product of matrix weight and vector entry into the target row accumulator.
+public export
+sparseDenseAccumStep : (dim : Nat) -> Vect dim BoxInt -> Vect dim BoxInt -> (Pixel, Nat) -> Vect dim BoxInt
+sparseDenseAccumStep dim vec acc (MkPixel r c, cnt) =
+  case (natToFin r dim, natToFin c dim) of
+    (Just rFin, Just cFin) =>
+      let vCol = index cFin vec
+          w = natToBoxInt cnt
+          term = mulBox w vCol
+      in updateVectAt rFin (\curr => addBox curr term) acc
+    _ => acc
+
+||| Directly contracts a sparse SquareMaxel with a dense VexelN in O(K + dim) steps,
+||| visiting only the K active non-zero coordinate pixels.
+public export
+contractSparseDenseVexel : {dim : Nat} -> SquareMaxel dim -> VexelN dim -> VexelN dim
+contractSparseDenseVexel {dim} (MkSquareMaxel tree) (MkVexelN vec) =
+  let initAcc = replicate dim (intToBoxInt 0)
+      foldedAcc = foldTreeL (sparseDenseAccumStep dim vec) initAcc tree
+  in MkVexelN foldedAcc
+
+||| 2LTT Staged Sparse-Dense Contraction:
+||| Evaluates sparse SquareMaxel contraction with dense VexelN in O(K + dim) steps.
+public export
+stagedContractSparseDense : {dim : Nat} -> Lift (SquareMaxel dim) -> VexelN dim -> Code (VexelN dim)
+stagedContractSparseDense qm v = quote (contractSparseDenseVexel (splice qm) v)
+
+||| Accumulator step for converting sparse SquareMaxel tree entries into dense MaxelN rows.
+public export
+squareMaxelToMaxelNStep : (dim : Nat) -> Vect dim (Vect dim BoxInt) -> (Pixel, Nat) -> Vect dim (Vect dim BoxInt)
+squareMaxelToMaxelNStep dim acc (MkPixel r c, cnt) =
+  case (natToFin r dim, natToFin c dim) of
+    (Just rFin, Just cFin) =>
+      let w = natToBoxInt cnt
+      in updateVectAt rFin (updateVectAt cFin (\curr => addBox curr w)) acc
+    _ => acc
+
+||| Dense conversion of a sparse SquareMaxel of size `dim` into a dense MaxelN.
+public export
+squareMaxelToMaxelN : (dim : Nat) -> SquareMaxel dim -> MaxelN dim
+squareMaxelToMaxelN dim (MkSquareMaxel tree) =
+  let zeroRow = replicate dim (intToBoxInt 0)
+      initRows = replicate dim zeroRow
+      foldedRows = foldTreeL (squareMaxelToMaxelNStep dim) initRows tree
+  in MkMaxelN foldedRows
+
+||| Helper inserting non-zero row elements into a MultisetTree Pixel.
+public export
+insertRowPixels : {dim : Nat} -> Fin dim -> MultisetTree Pixel -> (Fin dim, BoxInt) -> MultisetTree Pixel
+insertRowPixels rFin treeAcc (cFin, w) =
+  if unwrapBox w == 0 then treeAcc
+  else insertTokenTree (MkPixel (finToNat rFin) (finToNat cFin)) (boxToNat w) treeAcc
+
+||| Helper inserting all non-zero matrix elements of a row into a MultisetTree Pixel.
+public export
+insertMatrixPixels : {dim : Nat} -> MultisetTree Pixel -> (Fin dim, Vect dim BoxInt) -> MultisetTree Pixel
+insertMatrixPixels {dim} treeAcc (rFin, row) =
+  foldl (insertRowPixels rFin) treeAcc (zip (allFins dim) row)
+
+||| Sparse conversion of a dense MaxelN of size `dim` into a sparse SquareMaxel.
+public export
+maxelNToSquareMaxel : {dim : Nat} -> MaxelN dim -> SquareMaxel dim
+maxelNToSquareMaxel {dim} (MkMaxelN rs) =
+  let indexedRows = zip (allFins dim) rs
+      t = foldl insertMatrixPixels Leaf indexedRows
+  in MkSquareMaxel t
+
+
 ||| Constructor for 2-dimensional VexelN (single qubit state vector).
 public export
 mkVexel2 : BoxInt -> BoxInt -> VexelN 2
