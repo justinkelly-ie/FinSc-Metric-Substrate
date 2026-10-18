@@ -50,7 +50,7 @@ streamToSparseVexelBoxNat : BoxNat -> FS.FusedStream (VM.Unixel, BoxInt) -> VM.S
 streamToSparseVexelBoxNat fuel strm =
   let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
             let (u, w) = pair
-            in if unwrapBox w == 0 then tree
+            in if boxIsZero w then tree
                else MT.insertTokenTree u (boxToNat w) tree
           ) MT.Leaf strm
   in VM.MkSparseVexel t
@@ -61,7 +61,7 @@ streamToSquareMaxelBoxNat : {dim : Nat} -> BoxNat -> FS.FusedStream (VM.Pixel, B
 streamToSquareMaxelBoxNat fuel strm =
   let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
             let (p, w) = pair
-            in if unwrapBox w == 0 then tree
+            in if boxIsZero w then tree
                else MT.insertTokenTree p (boxToNat w) tree
           ) MT.Leaf strm
   in VM.MkSquareMaxel t

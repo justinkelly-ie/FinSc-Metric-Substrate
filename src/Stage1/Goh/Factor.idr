@@ -54,7 +54,7 @@ record GohFactor (p : Nat) where
 public export
 {p : Nat} -> Show (GohFactor p) where
   show (MkGohFactor _ _ geom q role) =
-    "GohFactor(" ++ show p ++ " | " ++ show geom ++ " | Q=" ++ show (unwrapBox q) ++ " | " ++ role ++ ")"
+    "GohFactor(" ++ show p ++ " | " ++ show geom ++ " | Q=" ++ show q ++ " | " ++ role ++ ")"
 
 ||| Projects a dependently typed GohFactor into the canonical CosmicDimension Sigma-pair.
 public export
@@ -269,13 +269,13 @@ prfFactor3RootAt3 = Refl
 ||| Invariant witness: Factor 2 and 3 vacuum quadrance sum matches Factor 5 vacuum root:
 ||| Q(2) + Q(3) = 4 + 9 = 13 (13-smooth prime).
 public export
-0 prfVacuumQuadranceSumIs13 : unwrapBox (vacuumQuadrance Factor2) + unwrapBox (vacuumQuadrance Factor3) = 13
+0 prfVacuumQuadranceSumIs13 : addBox (vacuumQuadrance Factor2) (vacuumQuadrance Factor3) = intToBoxInt 13
 prfVacuumQuadranceSumIs13 = Refl
 
 ||| Invariant witness: Dyadic Factor 2 vacuum quadrance Q(2) = 4 embodies the 2 + 2 factorisation:
 ||| Q(2) = 2^2 = 2 + 2 = 4.
 public export
-0 prfFactor2QuadranceIs4 : unwrapBox (vacuumQuadrance Factor2) = 4
+0 prfFactor2QuadranceIs4 : vacuumQuadrance Factor2 = intToBoxInt 4
 prfFactor2QuadranceIs4 = Refl
 
 ------------------------------------------------------------------------
@@ -318,7 +318,7 @@ public export
 gohFactorToStreamPoly : {p : Nat} -> GohFactor p -> StreamPolynumber
 gohFactorToStreamPoly f =
   FS.filterMapStream (\(deg, frac) =>
-    if unwrapBox frac.num /= 0 then Just (deg, frac.num) else Nothing)
+    if boxIsNonZero frac.num then Just (deg, frac.num) else Nothing)
     (streamVectWithIndex 0 f.coefficients)
 
 ||| Canonical static AVL MultisetTree of active 1D degrees for Factor 2 (degrees 0, 1).
@@ -421,7 +421,7 @@ public export
 makeColEntriesList : (dim : Nat) -> (idx : Nat) -> Vect k BoxInt -> List (VM.Pixel, BoxInt)
 makeColEntriesList _ _ [] = []
 makeColEntriesList dim idx (c :: cs) =
-  if unwrapBox c /= 0
+  if boxIsNonZero c
      then (VM.MkPixel idx dim, c) :: makeColEntriesList dim (S idx) cs
      else makeColEntriesList dim (S idx) cs
 
@@ -430,7 +430,7 @@ public export
 companionMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> VM.Maxel
 companionMaxelFromFeedback Z [] = VM.MkMaxel []
 companionMaxelFromFeedback 1 [c0] =
-  if unwrapBox c0 == 0 then VM.MkMaxel [] else VM.MkMaxel [(VM.MkPixel 1 1, c0)]
+  if boxIsZero c0 then VM.MkMaxel [] else VM.MkMaxel [(VM.MkPixel 1 1, c0)]
 companionMaxelFromFeedback (S (S k)) coeffs =
   let dim = S (S k)
       subDiag = makeSubDiagList (S k) 1

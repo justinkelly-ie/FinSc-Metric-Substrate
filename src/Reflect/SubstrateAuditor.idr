@@ -122,11 +122,10 @@ streamClassify4Geometries (MkStream next seed) =
                      Skip st' => Skip st'
                      Yield (sig, w) st' =>
                        let det = detSignatureMonomorphic sig
-                           val = unwrapBox det
-                           geom = if val > 0 then EllipticGeom
-                                  else if val < 0 then HyperbolicGeom
-                                  else if val == 0 then ParabolicGeom
-                                  else SubstrateGeom
+                           zero = intToBoxInt 0
+                           geom = if det > zero then EllipticGeom
+                                  else if det < zero then HyperbolicGeom
+                                  else ParabolicGeom
                        in Yield (geom, w) st')
            seed
 
@@ -145,7 +144,7 @@ auditBudgetFromGeometryStream fuel strm =
           (intToBoxInt 0, intToBoxInt 0, intToBoxInt 0)
           strm
       tot = addBox vm (addBox de dm)
-  in unwrapBox tot == 210
+  in tot == intToBoxInt 210
 
 ------------------------------------------------------------------------
 -- 4. LINEAR QTT COINDUCTIVE STREAM CARRIER PRESERVATION (RULE 04)

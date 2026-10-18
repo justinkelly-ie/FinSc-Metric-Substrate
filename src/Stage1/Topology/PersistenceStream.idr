@@ -225,11 +225,11 @@ auditPersistenceStreamProof =
       betti = fusedComputeBettiRankBoxNat bfuel items
       (b0, b1, b2) = fusedSimplicialPersistenceReductionBoxNat bfuel items
       b1Sifted = fusedComputeSiftedBettiRankBoxNat bfuel (\tok => dimension tok == Dim1) items
-  in unwrapBox betti == 4 && unwrapBox bettiStream == 4 &&
-     unwrapBox b0 == 1 && unwrapBox b0Stream == 1 &&
-     unwrapBox b1 == 2 && unwrapBox b1Stream == 2 &&
-     unwrapBox b2 == 1 && unwrapBox b2Stream == 1 &&
-     unwrapBox b1Sifted == 2 && unwrapBox b1SiftedStream == 2
+  in betti == intToBoxInt 4 && bettiStream == intToBoxInt 4 &&
+     b0 == intToBoxInt 1 && b0Stream == intToBoxInt 1 &&
+     b1 == intToBoxInt 2 && b1Stream == intToBoxInt 2 &&
+     b2 == intToBoxInt 1 && b2Stream == intToBoxInt 1 &&
+     b1Sifted == intToBoxInt 2 && b1SiftedStream == intToBoxInt 2
 
 --------------------------------------------------------------------------------
 -- 3. NILPOTENT PERSISTENCE STREAM TRANSPORT

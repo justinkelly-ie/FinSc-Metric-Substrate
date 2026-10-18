@@ -271,7 +271,7 @@ laplacianTree1D tree =
           lVal = lookupBoxTree (x - 1) tree
           rVal = lookupBoxTree (x + 1) tree
           lap = (intToBoxInt 2 * cVal) - (lVal + rVal)
-      in if unwrapBox lap == 0
+      in if boxIsZero lap
            then acc
            else setBoxTree x lap acc
 
@@ -299,7 +299,7 @@ laplacianTree2D tree =
           uVal = lookupBoxTree (x, y + 1) tree
           dVal = lookupBoxTree (x, y - 1) tree
           lap = (intToBoxInt 4 * cVal) - (lVal + rVal + uVal + dVal)
-      in if unwrapBox lap == 0
+      in if boxIsZero lap
            then acc
            else setBoxTree pt lap acc
 

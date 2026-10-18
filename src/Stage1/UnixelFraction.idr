@@ -157,7 +157,7 @@ divUnixelFraction (MkUnixelFraction n1 (MkUnixel d1)) (MkUnixelFraction n2 (MkUn
   let d2Int = natToBoxInt d2
       newNum = n1 * d2Int
       dDenom = let d = boxToNat n2 in if d == 0 then 1 else d
-      signAdj = if unwrapBox n2 < 0 then -1 else 1
+      signAdj = if n2 < intToBoxInt 0 then -1 else 1
   in mkUnixelFraction (newNum * intToBoxInt signAdj) (d1 * dDenom)
 
 
@@ -248,11 +248,11 @@ toContinuedFraction (S fuel) (MkUnixelFraction n (MkUnixel d)) =
        else
          let a0 = n `div` dInt
              remVal = n - (a0 * dInt)
-         in if unwrapBox remVal == 0
+         in if boxIsZero remVal
               then [a0]
               else
                 let remNat = boxToNat remVal
-                    inverted = MkUnixelFraction (if unwrapBox remVal >= 0 then dInt else -dInt) (MkUnixel remNat)
+                    inverted = MkUnixelFraction (if remVal >= intToBoxInt 0 then dInt else -dInt) (MkUnixel remNat)
                 in a0 :: toContinuedFraction fuel inverted
 
 
@@ -333,9 +333,9 @@ toSternBrocotPath fuel target =
           (MkUnixelFraction nq (MkUnixel dq)) = q
           (MkUnixelFraction nm (MkUnixel dm)) = m
           crossDiff = (nq * natToBoxInt dm) - (nm * natToBoxInt dq)
-      in if unwrapBox crossDiff == 0
+      in if boxIsZero crossDiff
            then []
-           else if crossDiff < 0
+           else if crossDiff < intToBoxInt 0
                   then BranchL :: helper f l m q
                   else BranchR :: helper f m r q
 
@@ -432,8 +432,7 @@ public export
 multisetChance : Eq a => a -> Box a -> UnixelFraction
 multisetChance target omega =
   let w = lookupBox target omega
-      totVal = unwrapBox (totalMassBox omega)
-      d = if totVal <= 0 then 1 else integerToNat totVal
+      d = boxIntToPositiveNat (totalMassBox omega)
   in mkUnixelFraction w d
 
 ||| Multiset Born Rule: Given a quantum state Vexel v = sum c_k [k],
@@ -443,8 +442,7 @@ public export
 multisetBornRule : Unixel -> Vexel -> UnixelFraction
 multisetBornRule target v =
   let w = lookupUnixel target v
-      totVal = unwrapBox (totalVexelMass v)
-      d = if totVal <= 0 then 1 else integerToNat totVal
+      d = boxIntToPositiveNat (totalVexelMass v)
   in mkUnixelFraction w d
 
 

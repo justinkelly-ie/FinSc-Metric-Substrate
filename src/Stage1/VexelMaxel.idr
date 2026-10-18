@@ -182,10 +182,10 @@ public export
 vexelListToBoxTree : List (Unixel, BoxInt) -> BoxMultisetTree Unixel
 vexelListToBoxTree terms =
   foldl (\t, (u, w) =>
-          if unwrapBox w == 0 then t
+          if boxIsZero w then t
           else let cur = lookupBoxTree u t
                    newW = cur + w
-               in if unwrapBox newW == 0
+               in if boxIsZero newW
                     then setBoxTree u (intToBoxInt 0) t
                     else setBoxTree u newW t)
         BoxLeaf
@@ -197,10 +197,10 @@ public export
 maxelListToBoxTree : List (Pixel, BoxInt) -> BoxMultisetTree Pixel
 maxelListToBoxTree pxs =
   foldl (\t, (p, w) =>
-          if unwrapBox w == 0 then t
+          if boxIsZero w then t
           else let cur = lookupBoxTree p t
                    newW = cur + w
-               in if unwrapBox newW == 0
+               in if boxIsZero newW
                     then setBoxTree p (intToBoxInt 0) t
                     else setBoxTree p newW t)
         BoxLeaf
@@ -440,7 +440,7 @@ squareMaxelToMaxelN dim (MkSquareMaxel tree) =
 public export
 insertRowPixels : {dim : Nat} -> Fin dim -> MultisetTree Pixel -> (Fin dim, BoxInt) -> MultisetTree Pixel
 insertRowPixels rFin treeAcc (cFin, w) =
-  if unwrapBox w == 0 then treeAcc
+  if boxIsZero w then treeAcc
   else insertTokenTree (MkPixel (finToNat rFin) (finToNat cFin)) (boxToNat w) treeAcc
 
 ||| Helper inserting all non-zero matrix elements of a row into a MultisetTree Pixel.
@@ -519,7 +519,7 @@ stagedContractBoxSquareDense qm v = quote (contractBoxSquareDense (splice qm) v)
 public export
 insertRowBoxPixels : {dim : Nat} -> Fin dim -> BoxMultisetTree Pixel -> (Fin dim, BoxInt) -> BoxMultisetTree Pixel
 insertRowBoxPixels rFin treeAcc (cFin, w) =
-  if unwrapBox w == 0 then treeAcc
+  if boxIsZero w then treeAcc
   else setBoxTree (MkPixel (finToNat rFin) (finToNat cFin)) w treeAcc
 
 ||| Helper inserting all non-zero matrix elements of a row into a BoxMultisetTree Pixel.
@@ -566,7 +566,7 @@ mulBoxSquareMaxel {dim} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
               let wOut = w1 * w2
                   cur = lookupBoxTree pOut innerAcc
                   newW = cur + wOut
-              in if unwrapBox newW == 0
+              in if boxIsZero newW
                    then innerAcc
                    else setBoxTree pOut newW innerAcc
             Nothing => innerAcc)
@@ -586,7 +586,7 @@ stagedComposeBoxSquareMaxel qm1 qm2 = quote (mulBoxSquareMaxel (splice qm1) (spl
 public export
 scaleBoxSquareMaxel : {dim : Nat} -> BoxInt -> BoxSquareMaxel dim -> BoxSquareMaxel dim
 scaleBoxSquareMaxel {dim} s (MkBoxSquareMaxel tree) =
-  if unwrapBox s == 0
+  if boxIsZero s
     then MkBoxSquareMaxel BoxLeaf
     else let scaled = foldBoxTreeL (\acc, (p, w) => setBoxTree p (s * w) acc) BoxLeaf tree
          in MkBoxSquareMaxel scaled
@@ -599,7 +599,7 @@ addBoxSquareMaxel {dim} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
       step acc (p, w) =
         let cur = lookupBoxTree p acc
             newW = cur + w
-        in if unwrapBox newW == 0
+        in if boxIsZero newW
              then setBoxTree p (intToBoxInt 0) acc
              else setBoxTree p newW acc
       sumTree = foldBoxTreeL step t1 t2
@@ -671,7 +671,7 @@ kroneckerBoxSquareMaxel {m} {n} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
         foldBoxTreeL (\innerAcc, (MkPixel r2 c2, w2) =>
           let pOut = observeKroneckerPixel n ((r1, r2), (c1, c2))
               wOut = w1 * w2
-          in if unwrapBox wOut == 0
+          in if boxIsZero wOut
                then innerAcc
                else setBoxTree pOut wOut innerAcc)
           accTree
@@ -907,19 +907,19 @@ public export
 pruneVexelTerms : List (Unixel, BoxInt) -> List (Unixel, BoxInt)
 pruneVexelTerms [] = []
 pruneVexelTerms ((s, w) :: rest) =
-  if unwrapBox w == 0 then pruneVexelTerms rest else (s, w) :: pruneVexelTerms rest
+  if boxIsZero w then pruneVexelTerms rest else (s, w) :: pruneVexelTerms rest
 
 public export
 pruneMaxelTerms : List (Pixel, BoxInt) -> List (Pixel, BoxInt)
 pruneMaxelTerms [] = []
 pruneMaxelTerms ((p, w) :: rest) =
-  if unwrapBox w == 0 then pruneMaxelTerms rest else (p, w) :: pruneMaxelTerms rest
+  if boxIsZero w then pruneMaxelTerms rest else (p, w) :: pruneMaxelTerms rest
 
 public export
 pruneBoxelTerms : List (Voxel, BoxInt) -> List (Voxel, BoxInt)
 pruneBoxelTerms [] = []
 pruneBoxelTerms ((v, w) :: rest) =
-  if unwrapBox w == 0 then pruneBoxelTerms rest else (v, w) :: pruneBoxelTerms rest
+  if boxIsZero w then pruneBoxelTerms rest else (v, w) :: pruneBoxelTerms rest
 
 ||| Aggregates duplicate coordinate Voxels and prunes zero-weight entries in a Boxel via Multiset reduction.
 public export
@@ -1113,7 +1113,7 @@ mulMaxel (MkMaxelTree t1) (MkMaxelTree t2) =
               let wOut = w1 * w2
                   cur = lookupBoxTree pOut acc
                   newW = cur + wOut
-              in if unwrapBox newW == 0
+              in if boxIsZero newW
                    then setBoxTree pOut (intToBoxInt 0) acc
                    else setBoxTree pOut newW acc
             Nothing => acc)
@@ -1135,7 +1135,7 @@ actMaxelVexel (MkMaxelTree tm) (MkVexelTree tv) =
               let wOut = pw * sw
                   cur = lookupBoxTree sOut acc
                   newW = cur + wOut
-              in if unwrapBox newW == 0
+              in if boxIsZero newW
                    then setBoxTree sOut (intToBoxInt 0) acc
                    else setBoxTree sOut newW acc
             Nothing => acc)
@@ -1166,13 +1166,13 @@ identityMaxel =
 public export
 supportMaxel : Maxel -> List Pixel
 supportMaxel (MkMaxelTree t) =
-  foldBoxTreeR (\p, w, acc => if unwrapBox w /= 0 then p :: acc else acc) [] t
+  foldBoxTreeR (\p, w, acc => if boxIsNonZero w then p :: acc else acc) [] t
 
 ||| Extracts the finite active support of a Vexel vector as a list of basis Unixels.
 public export
 supportVexel : Vexel -> List Unixel
 supportVexel (MkVexelTree t) =
-  foldBoxTreeR (\u, w, acc => if unwrapBox w /= 0 then u :: acc else acc) [] t
+  foldBoxTreeR (\u, w, acc => if boxIsNonZero w then u :: acc else acc) [] t
 
 ------------------------------------------------------------------------
 -- CHROMOGEOMETRIC METRIC MAXELS & SUPPORT FINGERPRINTS
@@ -1213,7 +1213,7 @@ addMaxel (MkMaxelTree t1) (MkMaxelTree t2) =
   let tMerged = foldBoxTreeL (\tree, (p, w) =>
                   let cur = lookupBoxTree p tree
                       newW = cur + w
-                  in if unwrapBox newW == 0
+                  in if boxIsZero newW
                        then setBoxTree p (intToBoxInt 0) tree
                        else setBoxTree p newW tree)
                   t1
@@ -1224,7 +1224,7 @@ addMaxel (MkMaxelTree t1) (MkMaxelTree t2) =
 public export
 scaleMaxel : BoxInt -> Maxel -> Maxel
 scaleMaxel s (MkMaxelTree t) =
-  if unwrapBox s == 0
+  if boxIsZero s
     then MkMaxelTree BoxLeaf
     else MkMaxelTree (mapBoxTreeWeight (s *) t)
 
@@ -1372,7 +1372,7 @@ auditMatrixPathCompositionProof =
       sProd = supportMaxel gProd
       e11 = lookupPixel (MkPixel 1 1) gProd
       e22 = lookupPixel (MkPixel 2 2) gProd
-  in sProd == [MkPixel 1 1, MkPixel 2 2] && unwrapBox e11 == 1 && unwrapBox e22 == 1
+  in sProd == [MkPixel 1 1, MkPixel 2 2] && e11 == intToBoxInt 1 && e22 == intToBoxInt 1
 
 ||| Adds two Vexels and consolidates duplicate coordinates directly via BoxMultisetTree in O(N log N).
 public export
@@ -1381,7 +1381,7 @@ addVexel (MkVexelTree t1) (MkVexelTree t2) =
   let tMerged = foldBoxTreeL (\tree, (u, w) =>
                   let cur = lookupBoxTree u tree
                       newW = cur + w
-                  in if unwrapBox newW == 0
+                  in if boxIsZero newW
                        then setBoxTree u (intToBoxInt 0) tree
                        else setBoxTree u newW tree)
                   t1
@@ -1441,7 +1441,7 @@ subVexel (MkVexelTree t1) (MkVexelTree t2) =
   let tMerged = foldBoxTreeL (\tree, (u, w) =>
                   let cur = lookupBoxTree u tree
                       newW = cur - w
-                  in if unwrapBox newW == 0
+                  in if boxIsZero newW
                        then setBoxTree u (intToBoxInt 0) tree
                        else setBoxTree u newW tree)
                   t1
@@ -1466,7 +1466,7 @@ subMaxel (MkMaxelTree t1) (MkMaxelTree t2) =
   let tMerged = foldBoxTreeL (\tree, (p, w) =>
                   let cur = lookupBoxTree p tree
                       newW = cur - w
-                  in if unwrapBox newW == 0
+                  in if boxIsZero newW
                        then setBoxTree p (intToBoxInt 0) tree
                        else setBoxTree p newW tree)
                   t1
@@ -1482,7 +1482,7 @@ Neg Maxel where
 public export
 scaleVexel : BoxInt -> Vexel -> Vexel
 scaleVexel s (MkVexelTree t) =
-  if unwrapBox s == 0
+  if boxIsZero s
     then MkVexelTree BoxLeaf
     else MkVexelTree (mapBoxTreeWeight (s *) t)
 
@@ -1545,7 +1545,7 @@ extractRowVexel i (MkMaxelTree tm) =
                        Just sOut =>
                          let cur = lookupBoxTree sOut acc
                              newW = cur + w
-                         in if unwrapBox newW == 0
+                         in if boxIsZero newW
                               then setBoxTree sOut (intToBoxInt 0) acc
                               else setBoxTree sOut newW acc
                        Nothing   => acc)
@@ -1563,7 +1563,7 @@ extractColVexel j (MkMaxelTree tm) =
                        Just sOut =>
                          let cur = lookupBoxTree sOut acc
                              newW = cur + w
-                         in if unwrapBox newW == 0
+                         in if boxIsZero newW
                               then setBoxTree sOut (intToBoxInt 0) acc
                               else setBoxTree sOut newW acc
                        Nothing   => acc)
@@ -1586,7 +1586,7 @@ outerProductVexel (MkVexelTree tk) (MkVexelTree tb) =
               wOut = kw * bw
               cur = lookupBoxTree p innerAcc
               newW = cur + wOut
-          in if unwrapBox newW == 0
+          in if boxIsZero newW
                then setBoxTree p (intToBoxInt 0) innerAcc
                else setBoxTree p newW innerAcc)
           accTree
@@ -1617,7 +1617,7 @@ sliceBoxelZ targetZ (MkBoxel voxs) =
                      if z == targetZ
                        then let cur = lookupBoxTree (MkPixel x y) acc
                                 newW = cur + w
-                            in if unwrapBox newW == 0
+                            in if boxIsZero newW
                                  then setBoxTree (MkPixel x y) (intToBoxInt 0) acc
                                  else setBoxTree (MkPixel x y) newW acc
                        else acc)
@@ -1633,7 +1633,7 @@ sliceBoxelY targetY (MkBoxel voxs) =
                      if y == targetY
                        then let cur = lookupBoxTree (MkPixel x z) acc
                                 newW = cur + w
-                            in if unwrapBox newW == 0
+                            in if boxIsZero newW
                                  then setBoxTree (MkPixel x z) (intToBoxInt 0) acc
                                  else setBoxTree (MkPixel x z) newW acc
                        else acc)
@@ -1649,7 +1649,7 @@ sliceBoxelX targetX (MkBoxel voxs) =
                      if x == targetX
                        then let cur = lookupBoxTree (MkPixel y z) acc
                                 newW = cur + w
-                            in if unwrapBox newW == 0
+                            in if boxIsZero newW
                                  then setBoxTree (MkPixel y z) (intToBoxInt 0) acc
                                  else setBoxTree (MkPixel y z) newW acc
                        else acc)
@@ -1754,12 +1754,12 @@ wedgeVexel (MkVexelTree tu) (MkVexelTree tv) =
                   pNeg = MkPixel j i
                   curPos = lookupBoxTree pPos accV
                   newPos = curPos + w
-                  tree1 = if unwrapBox newPos == 0
+                  tree1 = if boxIsZero newPos
                             then setBoxTree pPos (intToBoxInt 0) accV
                             else setBoxTree pPos newPos accV
                   curNeg = lookupBoxTree pNeg tree1
                   newNeg = curNeg - w
-              in if unwrapBox newNeg == 0
+              in if boxIsZero newNeg
                    then setBoxTree pNeg (intToBoxInt 0) tree1
                    else setBoxTree pNeg newNeg tree1)
           accU
@@ -1826,7 +1826,7 @@ Show HyperBoxel where
 public export
 canonicalizeHyperBoxel : HyperBoxel -> HyperBoxel
 canonicalizeHyperBoxel (MkHyperBoxel raw) =
-  let nonZero = filter (\(_, w) => unwrapBox w /= 0) raw
+  let nonZero = filter (\(_, w) => boxIsNonZero w) raw
       merged = foldl insertOrAdd [] nonZero
   in MkHyperBoxel merged
   where
@@ -1835,7 +1835,7 @@ canonicalizeHyperBoxel (MkHyperBoxel raw) =
     insertOrAdd ((t, w) :: rest) (newT, newW) =
       if t == newT
         then let combined = w + newW
-             in if unwrapBox combined == 0 then rest else (t, combined) :: rest
+             in if boxIsZero combined then rest else (t, combined) :: rest
         else (t, w) :: insertOrAdd rest (newT, newW)
 
 ||| Looks up the weight of a 4D Tesseract coordinate in a HyperBoxel.
@@ -1942,13 +1942,14 @@ isNonTrivialBalance (MkBalanceArray posW negW) =
 public export
 find2VexelBalance : Vexel -> Vexel -> Maybe (BalanceArray 2)
 find2VexelBalance v1 v2 =
-  let m1 = unwrapBox (totalVexelMass v1)
-      m2 = unwrapBox (totalVexelMass v2)
-  in if m1 <= 0 || m2 <= 0
+  let m1 = totalVexelMass v1
+      m2 = totalVexelMass v2
+      zero = intToBoxInt 0
+  in if m1 <= zero || m2 <= zero
        then Nothing
        else
-         let n1 = integerToNat m1
-             n2 = integerToNat m2
+         let n1 = boxToNat m1
+             n2 = boxToNat m2
              g = natGcd n1 n2
              c1 = if g == 0 then 1 else n2 `div` g
              c2 = if g == 0 then 1 else n1 `div` g
