@@ -453,6 +453,30 @@ public export
 stagedComposeBoxSquareMaxel : {dim : Nat} -> Lift (BoxSquareMaxel dim) -> Lift (BoxSquareMaxel dim) -> Code (BoxSquareMaxel dim)
 stagedComposeBoxSquareMaxel qm1 qm2 = quote (mulBoxSquareMaxel (splice qm1) (splice qm2))
 
+||| Scales a BoxSquareMaxel by a BoxInt scalar.
+public export
+scaleBoxSquareMaxel : {dim : Nat} -> BoxInt -> BoxSquareMaxel dim -> BoxSquareMaxel dim
+scaleBoxSquareMaxel {dim} s (MkBoxSquareMaxel tree) =
+  if unwrapBox s == 0
+    then MkBoxSquareMaxel BoxLeaf
+    else let scaled = foldBoxTreeL (\acc, (p, w) => setBoxTree p (s * w) acc) BoxLeaf tree
+         in MkBoxSquareMaxel scaled
+
+||| Adds two BoxSquareMaxels of matching dimension `dim`.
+public export
+addBoxSquareMaxel : {dim : Nat} -> BoxSquareMaxel dim -> BoxSquareMaxel dim -> BoxSquareMaxel dim
+addBoxSquareMaxel {dim} (MkBoxSquareMaxel t1) (MkBoxSquareMaxel t2) =
+  let step : BoxMultisetTree Pixel -> (Pixel, BoxInt) -> BoxMultisetTree Pixel
+      step acc (p, w) =
+        let cur = lookupBoxTree p acc
+            newW = cur + w
+        in if unwrapBox newW == 0
+             then setBoxTree p (intToBoxInt 0) acc
+             else setBoxTree p newW acc
+      sumTree = foldBoxTreeL step t1 t2
+  in MkBoxSquareMaxel sumTree
+
+
 
 ||| Constructor for 2-dimensional VexelN (single qubit state vector).
 public export
