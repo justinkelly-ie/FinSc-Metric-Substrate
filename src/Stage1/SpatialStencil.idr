@@ -6,6 +6,7 @@ import Stage0.Multiset
 import Stage1.MultisetDuality
 import Stage1.TypeTheory.Staging
 import Stage1.VexelMaxel
+import Stage1.MultisetTree
 
 %default total
 
@@ -249,5 +250,71 @@ auditStagedStencil2D =
      (c3 == intToBoxInt 60) &&
      (totalFlux == intToBoxInt 0)
 
+--------------------------------------------------------------------------------
+-- 7. FAST MULTISETTREE SPATIAL STENCILS & 2LTT ACTIVE SUPPORT CONVOLUTION
+--------------------------------------------------------------------------------
 
+||| Evaluates 1D 3-point Laplacian stencil (-1, 2, -1) over the active multiset support of a tree:
+||| lap(x) = 2 * c(x) - c(x-1) - c(x+1).
+||| Lookups and insertions run in O(log N) time with zero allocation for vacuum nodes.
+public export
+laplacianTree1D : BoxMultisetTree Integer -> BoxMultisetTree Integer
+laplacianTree1D tree =
+  let candidates = foldBoxTreeR (\x, _, acc => the (List Integer) ((x - 1) :: x :: (x + 1) :: acc))
+                                (the (List Integer) [])
+                                tree
+  in foldl updatePoint BoxLeaf candidates
+  where
+    updatePoint : BoxMultisetTree Integer -> Integer -> BoxMultisetTree Integer
+    updatePoint acc x =
+      let cVal = lookupBoxTree x tree
+          lVal = lookupBoxTree (x - 1) tree
+          rVal = lookupBoxTree (x + 1) tree
+          lap = (intToBoxInt 2 * cVal) - (lVal + rVal)
+      in if unwrapBox lap == 0
+           then acc
+           else setBoxTree x lap acc
 
+||| 2LTT Staged 1D MultisetTree Stencil Convolution.
+public export
+stagedLaplacianTree1D : Lift (BoxMultisetTree Integer) -> Code (BoxMultisetTree Integer)
+stagedLaplacianTree1D qTree = quote (laplacianTree1D (splice qTree))
+
+||| Evaluates 2D 5-point discrete Laplacian stencil (4*c - l - r - u - d) over 2D BoxMultisetTree.
+public export
+laplacianTree2D : BoxMultisetTree (Integer, Integer) -> BoxMultisetTree (Integer, Integer)
+laplacianTree2D tree =
+  let candidates = foldBoxTreeR (\(x, y), _, acc =>
+                                  the (List (Integer, Integer))
+                                    ((x, y) :: (x - 1, y) :: (x + 1, y) :: (x, y - 1) :: (x, y + 1) :: acc))
+                                (the (List (Integer, Integer)) [])
+                                tree
+  in foldl updatePoint BoxLeaf candidates
+  where
+    updatePoint : BoxMultisetTree (Integer, Integer) -> (Integer, Integer) -> BoxMultisetTree (Integer, Integer)
+    updatePoint acc pt@(x, y) =
+      let cVal = lookupBoxTree pt tree
+          lVal = lookupBoxTree (x - 1, y) tree
+          rVal = lookupBoxTree (x + 1, y) tree
+          uVal = lookupBoxTree (x, y + 1) tree
+          dVal = lookupBoxTree (x, y - 1) tree
+          lap = (intToBoxInt 4 * cVal) - (lVal + rVal + uVal + dVal)
+      in if unwrapBox lap == 0
+           then acc
+           else setBoxTree pt lap acc
+
+||| Audit invariant for MultisetTree spatial stencils:
+||| Tests that a unit excitation at x = 0 produces exact flux: lap(0) = 2, lap(-1) = -1, lap(1) = -1.
+||| Net discrete flux sum = 2 - 1 - 1 = 0 (exact flux conservation).
+public export
+auditTreeStencilProof : Bool
+auditTreeStencilProof =
+  let t0 : BoxMultisetTree Integer = setBoxTree 0 (intToBoxInt 1) BoxLeaf
+      res = laplacianTree1D t0
+      c0  = lookupBoxTree 0 res
+      cm1 = lookupBoxTree (-1) res
+      c1  = lookupBoxTree 1 res
+      c2  = lookupBoxTree 2 res
+      netFlux = c0 + cm1 + c1
+  in c0 == intToBoxInt 2 && cm1 == intToBoxInt (-1) && c1 == intToBoxInt (-1) &&
+     c2 == intToBoxInt 0 && netFlux == intToBoxInt 0
