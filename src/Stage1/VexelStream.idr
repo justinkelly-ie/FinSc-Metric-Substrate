@@ -72,10 +72,10 @@ streamToVexelBoxNat : BoxNat -> FS.FusedStream (VM.Unixel, BoxInt) -> VM.Vexel
 streamToVexelBoxNat fuel strm =
   let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
             let (u, w) = pair
-            in if unwrapBox w == 0 then tree
+            in if boxIsZero w then tree
                else let cur = MT.lookupBoxTree u tree
                         newW = cur + w
-                    in if unwrapBox newW == 0
+                    in if boxIsZero newW
                          then MT.setBoxTree u (intToBoxInt 0) tree
                          else MT.setBoxTree u newW tree
           ) MT.BoxLeaf strm
@@ -87,10 +87,10 @@ streamToMaxelBoxNat : BoxNat -> FS.FusedStream (VM.Pixel, BoxInt) -> VM.Maxel
 streamToMaxelBoxNat fuel strm =
   let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
             let (p, w) = pair
-            in if unwrapBox w == 0 then tree
+            in if boxIsZero w then tree
                else let cur = MT.lookupBoxTree p tree
                         newW = cur + w
-                    in if unwrapBox newW == 0
+                    in if boxIsZero newW
                          then MT.setBoxTree p (intToBoxInt 0) tree
                          else MT.setBoxTree p newW tree
           ) MT.BoxLeaf strm
@@ -112,20 +112,20 @@ streamToBoxelBoxNat fuel strm =
 public export
 supportMaxelStream : FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream VM.Pixel
 supportMaxelStream =
-  FS.filterMapStream (\(px, w) => if unwrapBox w /= 0 then Just px else Nothing)
+  FS.filterMapStream (\(px, w) => if boxIsNonZero w then Just px else Nothing)
 
 ||| Deforested zero-allocation stream extractor for the active support of a Vexel stream.
 ||| Emits strictly non-zero basis Unixels without intermediate list allocations.
 public export
 supportVexelStream : FS.FusedStream (VM.Unixel, BoxInt) -> FS.FusedStream VM.Unixel
 supportVexelStream =
-  FS.filterMapStream (\(u, w) => if unwrapBox w /= 0 then Just u else Nothing)
+  FS.filterMapStream (\(u, w) => if boxIsNonZero w then Just u else Nothing)
 
 ||| Deforested zero-allocation stream extractor for the active support of a Boxel stream.
 public export
 supportBoxelStream : FS.FusedStream (VM.Voxel, BoxInt) -> FS.FusedStream VM.Voxel
 supportBoxelStream =
-  FS.filterMapStream (\(vx, w) => if unwrapBox w /= 0 then Just vx else Nothing)
+  FS.filterMapStream (\(vx, w) => if boxIsNonZero w then Just vx else Nothing)
 
 ------------------------------------------------------------------------
 -- DEFORESTED MATRIX STREAM TRANSFORMERS (RULE 04 SECTION 8)
