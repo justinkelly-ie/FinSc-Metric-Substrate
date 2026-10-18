@@ -16,10 +16,12 @@ import Stage1.DihedronModel as DM
 -- 2LTT STREAMING MULTISET VIEWS & BOXNAT CARRIERS
 ------------------------------------------------------------------------
 
-||| Deforested FusedStream view of a Vexel vector.
+||| Deforested FusedStream view of a Vexel vector in O(1) auxiliary registers.
 public export
 streamVexel : VM.Vexel -> FS.FusedStream (VM.Unixel, BoxInt)
-streamVexel v = FS.multisetToStream (VM.vexelToMultiset v)
+streamVexel v =
+  let (VM.MkVexel terms) = VM.canonicalizeVexel v
+  in FS.stream terms
 
 ||| Deforested FusedStream view of an AVL MultisetTree-backed SparseVexel vector.
 public export
@@ -33,10 +35,12 @@ streamSquareMaxel : VM.SquareMaxel dim -> FS.FusedStream (VM.Pixel, BoxInt)
 streamSquareMaxel (VM.MkSquareMaxel t) =
   FS.mapStream (\pair => let (p, cnt) = pair in (p, natToBoxInt cnt)) (MT.streamMultisetTreeDirect t)
 
-||| Deforested FusedStream view of a Maxel matrix.
+||| Deforested FusedStream view of a Maxel matrix in O(1) auxiliary registers.
 public export
 streamMaxel : VM.Maxel -> FS.FusedStream (VM.Pixel, BoxInt)
-streamMaxel m = FS.multisetToStream (VM.maxelToMultiset m)
+streamMaxel m =
+  let (VM.MkMaxel pxs) = VM.canonicalizeMaxel m
+  in FS.stream pxs
 
 ||| Deforested FusedStream view of a Boxel volume tensor.
 public export
