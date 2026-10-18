@@ -167,4 +167,87 @@ auditStagedStencil1D =
      (index 2 res.components == intToBoxInt 0) &&
      (index 3 res.components == intToBoxInt 40)
 
+--------------------------------------------------------------------------------
+-- 6. 2D STAGED BOUNDARIES & 5-POINT LAPLACIAN CONVOLUTIONS
+--------------------------------------------------------------------------------
+
+||| 2D Staged Boundary condition bundling horizontal (X) and vertical (Y) boundaries.
+public export
+record StagedBoundary2D where
+  constructor MkBoundary2D
+  boundaryX : StagedBoundary
+  boundaryY : StagedBoundary
+
+||| Looks up a 2D neighbor in a linearized (m x n) grid given coordinates (row, col) and 2D boundaries.
+public export
+boundaryLookup2D : {m, n : Nat} -> StagedBoundary2D -> Vect (m * n) BoxInt -> Integer -> Integer -> BoxInt
+boundaryLookup2D {m} {n} (MkBoundary2D bx by) grid r c =
+  let mInt = cast {to = Integer} m
+      nInt = cast {to = Integer} n
+  in if mInt <= 0 || nInt <= 0
+       then intToBoxInt 0
+       else
+         let rValid = r >= 0 && r < mInt
+             cValid = c >= 0 && c < nInt
+         in if rValid && cValid
+              then let linIdx = r * nInt + c
+                   in case natToFin (integerToNat linIdx) (m * n) of
+                        Just finIdx => index finIdx grid
+                        Nothing => intToBoxInt 0
+              else
+                let rEff = case by of
+                             PeriodicBoundary => ((r `mod` mInt) + mInt) `mod` mInt
+                             DirichletBoundary _ => -1
+                    cEff = case bx of
+                             PeriodicBoundary => ((c `mod` nInt) + nInt) `mod` nInt
+                             DirichletBoundary _ => -1
+                in if rEff >= 0 && cEff >= 0
+                     then let linIdx = rEff * nInt + cEff
+                          in case natToFin (integerToNat linIdx) (m * n) of
+                               Just finIdx => index finIdx grid
+                               Nothing => intToBoxInt 0
+                     else case (bx, by) of
+                            (DirichletBoundary dVal, _) => dVal
+                            (_, DirichletBoundary dVal) => dVal
+                            _ => intToBoxInt 0
+
+||| Unrolls a 2D 5-point discrete Laplacian (4*c - l - r - u - d) on a linearized (m x n) VexelN (m * n).
+public export
+stagedLaplacian2D : {m, n : Nat} -> StagedBoundary2D -> VexelN (m * n) -> Code (VexelN (m * n))
+stagedLaplacian2D {m} {n} bnd (MkVexelN comps) =
+  quote (MkVexelN (generateComps 0 comps))
+  where
+    generateComps : Integer -> Vect k BoxInt -> Vect k BoxInt
+    generateComps _ [] = []
+    generateComps linIdx (c :: rest) =
+      let nInt = cast {to = Integer} n
+          r = linIdx `div` (if nInt == 0 then 1 else nInt)
+          col = linIdx `mod` (if nInt == 0 then 1 else nInt)
+          leftVal  = boundaryLookup2D bnd comps r (col - 1)
+          rightVal = boundaryLookup2D bnd comps r (col + 1)
+          upVal    = boundaryLookup2D bnd comps (r - 1) col
+          downVal  = boundaryLookup2D bnd comps (r + 1) col
+          neighborSum = addBox (addBox leftVal rightVal) (addBox upVal downVal)
+          lap = subBox (mulBox (intToBoxInt 4) c) neighborSum
+      in lap :: generateComps (linIdx + 1) rest
+
+||| Audit invariant for staged 2D 5-point stencil Laplacian with exact Noether flux conservation (sum = 0).
+public export
+auditStagedStencil2D : Bool
+auditStagedStencil2D =
+  let v = mkVexel4 (intToBoxInt 10) (intToBoxInt 20) (intToBoxInt 30) (intToBoxInt 40)
+      bnd = MkBoundary2D PeriodicBoundary PeriodicBoundary
+      res = splice (stagedLaplacian2D {m=2} {n=2} bnd v)
+      c0 = index 0 res.components
+      c1 = index 1 res.components
+      c2 = index 2 res.components
+      c3 = index 3 res.components
+      totalFlux = addBox (addBox c0 c1) (addBox c2 c3)
+  in (c0 == intToBoxInt (-60)) &&
+     (c1 == intToBoxInt (-20)) &&
+     (c2 == intToBoxInt 20) &&
+     (c3 == intToBoxInt 60) &&
+     (totalFlux == intToBoxInt 0)
+
+
 

@@ -18,6 +18,11 @@ public export
 streamVexel : VM.Vexel -> FS.FusedStream (VM.Unixel, BoxInt)
 streamVexel v = FS.multisetToStream (VM.vexelToMultiset v)
 
+||| Deforested FusedStream view of an AVL MultisetTree-backed SparseVexel vector.
+public export
+streamSparseVexel : VM.SparseVexel -> FS.FusedStream (VM.Unixel, BoxInt)
+streamSparseVexel sv = streamVexel (VM.sparseVexelToVexel sv)
+
 ||| Deforested FusedStream view of a Maxel matrix.
 public export
 streamMaxel : VM.Maxel -> FS.FusedStream (VM.Pixel, BoxInt)

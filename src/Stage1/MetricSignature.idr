@@ -3,6 +3,8 @@ module Stage1.MetricSignature
 import Stage0.BoxInt
 import Stage0.Multiset
 import Stage1.VexelMaxel
+import Data.Vect
+import Stage1.TypeTheory.Staging
 
 %default total
 
@@ -150,3 +152,58 @@ prfHyperbolicQuadrance9 = Refl
 public export
 0 prfParabolicQuadrance9 : signatureQuadrance2D Stage1.MetricSignature.parabolicSignature2D (MkBoxInt 3) (MkBoxInt 4) = MkBoxInt 9
 prfParabolicQuadrance9 = Refl
+
+------------------------------------------------------------------------
+-- 6. CANONICAL MAXELN 2 METRIC TENSORS & 2LTT STAGED QUADRANCES
+------------------------------------------------------------------------
+
+||| Blue Elliptic Metric Tensor as MaxelN 2: diag(1, 1), det = +1.
+public export
+ellipticMetricMaxel2 : MaxelN 2
+ellipticMetricMaxel2 = mkMaxel2 (intToBoxInt 1) (intToBoxInt 0) (intToBoxInt 0) (intToBoxInt 1)
+
+||| Red Hyperbolic Metric Tensor as MaxelN 2: diag(1, -1), det = -1.
+public export
+hyperbolicMetricMaxel2 : MaxelN 2
+hyperbolicMetricMaxel2 = mkMaxel2 (intToBoxInt 1) (intToBoxInt 0) (intToBoxInt 0) (intToBoxInt (-1))
+
+||| Green Parabolic Metric Tensor as MaxelN 2: diag(1, 0), det = 0.
+public export
+parabolicMetricMaxel2 : MaxelN 2
+parabolicMetricMaxel2 = mkMaxel2 (intToBoxInt 1) (intToBoxInt 0) (intToBoxInt 0) (intToBoxInt 0)
+
+||| Master Substrate Metric Tensor as MaxelN 2: [[0, 1], [0, 0]], causal arrow.
+public export
+substrateMetricMaxel2 : MaxelN 2
+substrateMetricMaxel2 = mkMaxel2 (intToBoxInt 0) (intToBoxInt 1) (intToBoxInt 0) (intToBoxInt 0)
+
+||| Computes the 2D Chromatic Quadrance Q(v) = v^T * g * v using MaxelN 2 and VexelN 2.
+public export
+quadranceMaxelN2 : MaxelN 2 -> VexelN 2 -> BoxInt
+quadranceMaxelN2 g (MkVexelN v) =
+  let x = index 0 v
+      y = index 1 v
+      r0 = index 0 (rows g)
+      r1 = index 1 (rows g)
+      g00 = index 0 r0
+      g01 = index 1 r0
+      g10 = index 0 r1
+      g11 = index 1 r1
+      termX = mulBox x (addBox (mulBox g00 x) (mulBox g01 y))
+      termY = mulBox y (addBox (mulBox g10 x) (mulBox g11 y))
+  in addBox termX termY
+
+||| 2LTT Staged 2D Quadrance evaluation at Stage 1.
+public export
+stagedQuadrance2D : Lift (MaxelN 2) -> VexelN 2 -> Code BoxInt
+stagedQuadrance2D qg v = quote (quadranceMaxelN2 (splice qg) v)
+
+||| Audits that 2D metric quadrances match expected values under MaxelN 2.
+public export
+auditMetricMaxel2Quadrances : Bool
+auditMetricMaxel2Quadrances =
+  let qEll = quadranceMaxelN2 ellipticMetricMaxel2 (mkVexel2 (intToBoxInt 3) (intToBoxInt 4))
+      qHyp = quadranceMaxelN2 hyperbolicMetricMaxel2 (mkVexel2 (intToBoxInt 5) (intToBoxInt 4))
+      qPar = quadranceMaxelN2 parabolicMetricMaxel2 (mkVexel2 (intToBoxInt 3) (intToBoxInt 4))
+  in (qEll == intToBoxInt 25) && (qHyp == intToBoxInt 9) && (qPar == intToBoxInt 9)
+

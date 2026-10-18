@@ -519,6 +519,103 @@ public export
 maxelNToMaxel0 : {n : Nat} -> MaxelN n -> Maxel
 maxelNToMaxel0 (MkMaxelN rs) = canonicalizeMaxel (MkMaxel (matToPixelPairsHelper 0 0 rs))
 
+||| Converts a sparse multiset Vexel into a dimension-indexed VexelN (0-indexed).
+public export
+vexelToVexelN : (n : Nat) -> Vexel -> VexelN n
+vexelToVexelN n v =
+  MkVexelN (generateComponents 0 n)
+  where
+    generateComponents : Nat -> (k : Nat) -> Vect k BoxInt
+    generateComponents _ Z = []
+    generateComponents idx (S rem) =
+      let w = lookupUnixel (MkUnixel idx) v
+      in w :: generateComponents (S idx) rem
+
+||| Converts a sparse multiset Vexel into a dimension-indexed VexelN (1-indexed).
+public export
+vexelToVexelN1 : (n : Nat) -> Vexel -> VexelN n
+vexelToVexelN1 n v =
+  MkVexelN (generateComponents 1 n)
+  where
+    generateComponents : Nat -> (k : Nat) -> Vect k BoxInt
+    generateComponents _ Z = []
+    generateComponents idx (S rem) =
+      let w = lookupUnixel (MkUnixel idx) v
+      in w :: generateComponents (S idx) rem
+
+------------------------------------------------------------------------
+-- SPARSE VEXEL CARRIER (AVL MULTISET TREE BACKED)
+------------------------------------------------------------------------
+
+||| A SparseVexel is a discrete vector backed by a balanced AVL MultisetTree of Unixels in O(log N).
+public export
+record SparseVexel where
+  constructor MkSparseVexel
+  tree : MultisetTree Unixel
+
+public export
+Eq SparseVexel where
+  (MkSparseVexel t1) == (MkSparseVexel t2) = t1 == t2
+
+public export
+Show SparseVexel where
+  show (MkSparseVexel t) = "SparseVexel(" ++ show (treeToList t) ++ ")"
+
+public export
+sparseVexelToVexel : SparseVexel -> Vexel
+sparseVexelToVexel (MkSparseVexel t) = treeToVexel t
+
+public export
+vexelToSparseVexel : Vexel -> SparseVexel
+vexelToSparseVexel v = MkSparseVexel (vexelToTree v)
+
+public export
+vexelNToSparseVexel : {n : Nat} -> VexelN n -> SparseVexel
+vexelNToSparseVexel vn = vexelToSparseVexel (vexelNToVexel0 vn)
+
+public export
+sparseVexelToVexelN : (n : Nat) -> SparseVexel -> VexelN n
+sparseVexelToVexelN n sv = vexelToVexelN n (sparseVexelToVexel sv)
+
+public export
+lookupSparseVexel : Unixel -> SparseVexel -> BoxInt
+lookupSparseVexel u (MkSparseVexel t) = natToBoxInt (lookupTokenTree u t)
+
+------------------------------------------------------------------------
+-- DIMENSION-MULTIPLYING KRONECKER TENSOR OPERATORS (RULE 03 & 2LTT)
+------------------------------------------------------------------------
+
+||| Multiplies two Vect BoxInt vectors via Kronecker tensor product: Vect (n * m) BoxInt.
+public export
+kroneckerVect : {n, m : Nat} -> Vect n BoxInt -> Vect m BoxInt -> Vect (n * m) BoxInt
+kroneckerVect u v = concat (map (\x => map (mulBox x) v) u)
+
+||| Kronecker tensor product of two dimension-indexed VexelN vectors: VexelN (n * m).
+public export
+kroneckerVexelN : {n, m : Nat} -> VexelN n -> VexelN m -> VexelN (n * m)
+kroneckerVexelN (MkVexelN u) (MkVexelN v) = MkVexelN (kroneckerVect u v)
+
+||| Kronecker tensor product of two dimension-indexed MaxelN square matrices: MaxelN (n * m).
+public export
+kroneckerMaxelN : {n, m : Nat} -> MaxelN n -> MaxelN m -> MaxelN (n * m)
+kroneckerMaxelN (MkMaxelN rowsA) (MkMaxelN rowsB) =
+  let blockRows : Vect n (Vect m (Vect (n * m) BoxInt))
+      blockRows = map (\ra => map (\rb => kroneckerVect ra rb) rowsB) rowsA
+  in MkMaxelN (concat blockRows)
+
+||| 2LTT Staged Kronecker tensor product of two MaxelN square matrices at Stage 1.
+public export
+stagedKroneckerMaxelN : {n, m : Nat} -> Lift (MaxelN n) -> Lift (MaxelN m) -> Code (MaxelN (n * m))
+stagedKroneckerMaxelN qm1 qm2 = quote (kroneckerMaxelN (splice qm1) (splice qm2))
+
+||| Wildberger multiple-spread companion transfer matrix M(s) = [[2 - 4s, -1], [1, 0]] in MaxelN 2.
+public export
+companionSpreadMaxelN2 : BoxInt -> MaxelN 2
+companionSpreadMaxelN2 s =
+  let diag = subBox (intToBoxInt 2) (mulBox (intToBoxInt 4) s)
+  in mkMaxel2 diag (intToBoxInt (-1)) (intToBoxInt 1) (intToBoxInt 0)
+
+
 ------------------------------------------------------------------------
 -- QTT 0 ERASED ROUND-TRIP INVARIANT PROOFS
 ------------------------------------------------------------------------
@@ -815,6 +912,22 @@ Semigroup Vexel where
 public export
 Monoid Vexel where
   neutral = MkVexel []
+
+||| Adds two SparseVexels using multiset tree union.
+public export
+addSparseVexel : SparseVexel -> SparseVexel -> SparseVexel
+addSparseVexel (MkSparseVexel t1) (MkSparseVexel t2) =
+  let v1 = treeToVexel t1
+      v2 = treeToVexel t2
+  in vexelToSparseVexel (addVexel v1 v2)
+
+public export
+Semigroup SparseVexel where
+  (<+>) = addSparseVexel
+
+public export
+Monoid SparseVexel where
+  neutral = MkSparseVexel Leaf
 
 public export
 Semigroup Maxel where
