@@ -16,6 +16,9 @@ import public Stage0.Singleton.SingFraction
 
 import public Stage1.UnixelFraction
 import public Stage1.VexelMaxel
+import public Stage1.VexelStream
+import public Stage1.ProjectiveRotation
+import public Stage1.DihedronModel
 import public Stage1.FourGeometries
 import public Stage1.Goh.Factor
 import public Stage1.MetricSignature
