@@ -145,3 +145,53 @@ auditDihedronAdjugateIdentity d =
   let prod = mulDihedron2 d (adjugateDihedron2 d)
       det = detDihedron2 d
   in prod == MkDihedron2 det 0 0 det
+
+------------------------------------------------------------------------
+-- 4. RELATIVISTIC SPREAD TRANSFER DIHEDRON & STREAM GENERATOR (PHASE 4)
+------------------------------------------------------------------------
+
+||| Transpose of a Dihedron2 matrix: D^T = D(x; -t, r, s).
+public export
+transposeDihedron2 : Dihedron2 -> Dihedron2
+transposeDihedron2 (MkDihedron2 d00 d01 d10 d11) =
+  MkDihedron2 d00 d10 d01 d11
+
+||| Construct the companion spread transfer Dihedron:
+||| M(s) = [[2 - 4s, -1], [1, 0]] = D(1 - 2s; 1, 0, 1 - 2s).
+||| Determinant is identically +1 (unimodular Minkowski area preservation).
+public export
+spreadTransferDihedron : (s : BoxInt) -> Dihedron2
+spreadTransferDihedron s =
+  let x = intToBoxInt 1 - (intToBoxInt 2 * s)
+  in fromProportionMink x (intToBoxInt 1) (intToBoxInt 0) x
+
+||| Generates the deforested stream of successive multiple spreads S_n(s)
+||| via Dihedron companion transfer stepping in O(1) memory.
+||| Uses state (S_{n-1}, S_n) and affine recurrence:
+||| S_{n+1} = (2 - 4s)*S_n - S_{n-1} + 2s.
+public export
+streamMinkowskiSpreadRecurrence : (fuel : Nat) -> (s : BoxInt) -> FS.FusedStream BoxInt
+streamMinkowskiSpreadRecurrence fuel s =
+  FS.MkStream {s = (Nat, BoxInt, BoxInt)} next (fuel, intToBoxInt 0, s)
+  where
+    next : (Nat, BoxInt, BoxInt) -> FS.Step (Nat, BoxInt, BoxInt) BoxInt
+    next (Z, _, _) = FS.Done
+    next (S k, sPrev, sCurr) =
+      let d = spreadTransferDihedron s
+          sNext = (d00 d * sCurr) + (d01 d * sPrev) + (intToBoxInt 2 * s)
+      in FS.Yield sCurr (k, sCurr, sNext)
+
+||| Audit: Spread transfer Dihedron has determinant +1 for any spread s.
+public export
+auditSpreadTransferDihedronUnimodular : (s : BoxInt) -> Bool
+auditSpreadTransferDihedronUnimodular s =
+  detDihedron2 (spreadTransferDihedron s) == intToBoxInt 1
+
+||| Audit: streamMinkowskiSpreadRecurrence produces exact initial terms [s, 4s(1-s)] for s = 1.
+public export
+auditSpreadRecurrenceOrbitProof : Bool
+auditSpreadRecurrenceOrbitProof =
+  let s1 = intToBoxInt 1
+      strm = streamMinkowskiSpreadRecurrence 2 s1
+      orbit = FS.foldStreamNat 2 (\acc, x => acc ++ [x]) [] strm
+  in orbit == [intToBoxInt 1, intToBoxInt 0] && auditSpreadTransferDihedronUnimodular s1

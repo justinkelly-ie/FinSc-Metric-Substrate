@@ -95,3 +95,26 @@ toVectExact (S k) (x :: xs) = x :: toVectExact k xs
 public export
 generateSpreadPoly : (n : Nat) -> Vect (S n) BoxInt
 generateSpreadPoly n = toVectExact (S n) (spreadList n)
+
+------------------------------------------------------------------------
+-- 3. RELATIVISTIC TRIPLE SPREAD LAW (WILDBERGER RRR 3)
+------------------------------------------------------------------------
+
+||| Evaluates Wildberger's Relativistic Triple Spread Law invariant:
+||| (S1 + S2 - S3)^2 == 4 * S1 * S2 * (1 - S3).
+public export
+verifyRelativisticTripleSpreadLaw : (s1 : BoxInt) -> (s2 : BoxInt) -> (s3 : BoxInt) -> Bool
+verifyRelativisticTripleSpreadLaw s1 s2 s3 =
+  let lhs = (s1 + s2 - s3) * (s1 + s2 - s3)
+      rhs = (intToBoxInt 4 * s1 * s2) * (intToBoxInt 1 - s3)
+  in lhs == rhs
+
+||| Invariant audit verifying Relativistic Triple Spread Law on canonical cases:
+||| Case 1: Collinear boost / null spread (s1 = 0, s2 = 1, s3 = 1).
+||| Case 2: Orthogonal spreads (s1 = 1, s2 = 1, s3 = 0).
+public export
+auditRelativisticTripleSpreadLawProof : Bool
+auditRelativisticTripleSpreadLawProof =
+  verifyRelativisticTripleSpreadLaw (intToBoxInt 0) (intToBoxInt 1) (intToBoxInt 1) &&
+  verifyRelativisticTripleSpreadLaw (intToBoxInt 1) (intToBoxInt 1) (intToBoxInt 0)
+
