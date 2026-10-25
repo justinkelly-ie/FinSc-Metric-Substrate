@@ -124,7 +124,7 @@ public export
 signatureToMaxel2D : MetricSignature -> Maxel
 signatureToMaxel2D sig =
   let (w0, w1) = signatureWeights2D sig
-  in MkMaxel [ (MkPixel 0 0, w0), (MkPixel 1 1, w1) ]
+  in MkMaxel [ (mkPixel 0 0, w0), (mkPixel 1 1, w1) ]
 
 ||| Evaluates the 2D Quadrance of a coordinate pair (x, y) under a MetricSignature:
 ||| Q(x, y) = g_00 * x^2 + g_11 * y^2

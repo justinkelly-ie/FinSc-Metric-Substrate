@@ -27,8 +27,10 @@ import Language.Reflection
 public export
 multisetBoundary1To0 : Multiset BoxInt Pixel -> Multiset BoxInt Unixel
 multisetBoundary1To0 ZeroM = ZeroM
-multisetBoundary1To0 (AddM (MkPixel u v) w rest) =
-  insertItemBox (MkUnixel v) w (insertItemBox (MkUnixel u) (negBox w) (multisetBoundary1To0 rest))
+multisetBoundary1To0 (AddM p w rest) =
+  let u = pixelRow p
+      v = pixelCol p
+  in insertItemBox (mkUnixel v) w (insertItemBox (mkUnixel u) (negBox w) (multisetBoundary1To0 rest))
 
 ||| Canonical Maxel to Vexel boundary operator ∂₁ : Maxel -> Vexel.
 public export
@@ -67,9 +69,11 @@ boundaryPlaquetteToVexel loopEdges = multisetToVexel (multisetBoundaryChain2To0 
 public export
 multisetCoboundary0To1 : List Pixel -> Multiset BoxInt Unixel -> Multiset BoxInt Pixel
 multisetCoboundary0To1 [] _ = ZeroM
-multisetCoboundary0To1 (p@(MkPixel u v) :: rest) phi =
-  let phiU = lookupCountBox (MkUnixel u) phi
-      phiV = lookupCountBox (MkUnixel v) phi
+multisetCoboundary0To1 (p :: rest) phi =
+  let u = pixelRow p
+      v = pixelCol p
+      phiU = lookupCountBox (mkUnixel u) phi
+      phiV = lookupCountBox (mkUnixel v) phi
       diff = subBox phiV phiU
   in case diff of
        MkBoxInt 0 => multisetCoboundary0To1 rest phi
@@ -132,9 +136,11 @@ multisetLaplacian0 edges phi = multisetBoundary1To0 (multisetCoboundary0To1 edge
 public export
 streamCoboundary0To1 : FusedStream Pixel -> Multiset BoxInt Unixel -> FusedStream (Pixel, BoxInt)
 streamCoboundary0To1 strm phi =
-  filterMapStream (\p@(MkPixel u v) =>
-    let phiU = lookupCountBox (MkUnixel u) phi
-        phiV = lookupCountBox (MkUnixel v) phi
+  filterMapStream (\p =>
+    let u = pixelRow p
+        v = pixelCol p
+        phiU = lookupCountBox (mkUnixel u) phi
+        phiV = lookupCountBox (mkUnixel v) phi
         diff = subBox phiV phiU
     in case diff of
          MkBoxInt 0 => Nothing
@@ -175,10 +181,12 @@ public export
 streamLaplacian0Fuel : Fuel -> FusedStream Pixel -> Multiset BoxInt Unixel -> Multiset BoxInt Unixel
 streamLaplacian0Fuel f strm phi =
   let gradStrm = streamCoboundary0To1 strm phi
-  in foldStreamFuel f (\acc, (MkPixel u v, diff) =>
-       let negDiff = mulBox (intToBoxInt (-1)) diff
-           acc1 = insertItemBox (MkUnixel v) diff acc
-       in insertItemBox (MkUnixel u) negDiff acc1
+  in foldStreamFuel f (\acc, (p, diff) =>
+       let u = pixelRow p
+           v = pixelCol p
+           negDiff = mulBox (intToBoxInt (-1)) diff
+           acc1 = insertItemBox (mkUnixel v) diff acc
+       in insertItemBox (mkUnixel u) negDiff acc1
      ) ZeroM gradStrm
 
 
@@ -215,10 +223,10 @@ makeCellComplex loopEdges prf = MkHomologicalCellComplex prf
 public export
 auditConstantPotentialGradientZero : Bool
 auditConstantPotentialGradientZero =
-  let edges = [MkPixel 1 2, MkPixel 2 3, MkPixel 3 1]
-      phi   = AddM (MkUnixel 1) (intToBoxInt 5)
-              (AddM (MkUnixel 2) (intToBoxInt 5)
-              (AddM (MkUnixel 3) (intToBoxInt 5) ZeroM))
+  let edges = [mkPixel 1 2, mkPixel 2 3, mkPixel 3 1]
+      phi   = AddM (mkUnixel 1) (intToBoxInt 5)
+              (AddM (mkUnixel 2) (intToBoxInt 5)
+              (AddM (mkUnixel 3) (intToBoxInt 5) ZeroM))
   in isZeroMultiset (multisetCoboundary0To1 edges phi)
 
 ||| Static verification witness: Discrete Exterior Calculus nilpotency (d² = 0 / Stokes' Theorem)
@@ -226,11 +234,11 @@ auditConstantPotentialGradientZero =
 public export
 auditDecCoboundaryNilpotent : Bool
 auditDecCoboundaryNilpotent =
-  let loop = [MkPixel 1 2, MkPixel 2 3, MkPixel 3 1]
+  let loop = [mkPixel 1 2, mkPixel 2 3, mkPixel 3 1]
       pl   = MkDecPlaquette loop
-      phi  = AddM (MkUnixel 1) (intToBoxInt 13)
-             (AddM (MkUnixel 2) (intToBoxInt 29)
-             (AddM (MkUnixel 3) (intToBoxInt 42) ZeroM))
+      phi  = AddM (mkUnixel 1) (intToBoxInt 13)
+             (AddM (mkUnixel 2) (intToBoxInt 29)
+             (AddM (mkUnixel 3) (intToBoxInt 42) ZeroM))
   in isZeroMultiset (multisetCoboundary2 [pl] loop phi)
 
 ||| Monomorphic compile-time proof witness of DEC coboundary circulation cancellation.
@@ -246,10 +254,10 @@ auditDecNilpotencyProofExport =
 public export
 auditStreamCoboundaryEquivalenceProof : Bool
 auditStreamCoboundaryEquivalenceProof =
-  let edges = [MkPixel 1 2, MkPixel 2 3]
-      phi   = AddM (MkUnixel 1) (intToBoxInt 10)
-              (AddM (MkUnixel 2) (intToBoxInt 25)
-              (AddM (MkUnixel 3) (intToBoxInt 40) ZeroM))
+  let edges = [mkPixel 1 2, mkPixel 2 3]
+      phi   = AddM (mkUnixel 1) (intToBoxInt 10)
+              (AddM (mkUnixel 2) (intToBoxInt 25)
+              (AddM (mkUnixel 3) (intToBoxInt 40) ZeroM))
       listGrad = multisetCoboundary0To1 edges phi
       strmGrad = foldStreamCoboundaryToMultisetFuelModel masterSubstrateGohFuelModel (streamCoboundary0To1 (stream edges) phi)
   in listGrad == strmGrad

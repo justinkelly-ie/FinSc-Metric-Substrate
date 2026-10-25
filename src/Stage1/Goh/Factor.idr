@@ -358,27 +358,27 @@ gohFactorPolySupportStream f =
 ||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 2 (dim 1).
 public export
 factor2SupportTree : MultisetTree Pixel
-factor2SupportTree = Node 1 Leaf (MkPixel 1 1) 1 Leaf
+factor2SupportTree = Node 1 Leaf (mkPixel 1 1) 1 Leaf
 
 ||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 3 (dim 2).
 public export
 factor3SupportTree : MultisetTree Pixel
 factor3SupportTree =
-  Node 2 (Node 1 Leaf (MkPixel 1 2) 1 Leaf)
-         (MkPixel 2 1) 1
-         (Node 1 Leaf (MkPixel 2 2) 1 Leaf)
+  Node 2 (Node 1 Leaf (mkPixel 1 2) 1 Leaf)
+         (mkPixel 2 1) 1
+         (Node 1 Leaf (mkPixel 2 2) 1 Leaf)
 
 ||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 5 (dim 4).
 public export
 factor5SupportTree : MultisetTree Pixel
 factor5SupportTree =
-  let leftSub = Node 2 (Node 1 Leaf (MkPixel 1 4) 1 Leaf)
-                       (MkPixel 2 1) 1
-                       (Node 1 Leaf (MkPixel 2 4) 1 Leaf)
-      rightSub = Node 2 (Node 1 Leaf (MkPixel 3 4) 1 Leaf)
-                        (MkPixel 4 3) 1
-                        (Node 1 Leaf (MkPixel 4 4) 1 Leaf)
-  in Node 3 leftSub (MkPixel 3 2) 1 rightSub
+  let leftSub = Node 2 (Node 1 Leaf (mkPixel 1 4) 1 Leaf)
+                       (mkPixel 2 1) 1
+                       (Node 1 Leaf (mkPixel 2 4) 1 Leaf)
+      rightSub = Node 2 (Node 1 Leaf (mkPixel 3 4) 1 Leaf)
+                        (mkPixel 4 3) 1
+                        (Node 1 Leaf (mkPixel 4 4) 1 Leaf)
+  in Node 3 leftSub (mkPixel 3 2) 1 rightSub
 
 ||| O(log N) AVL MultisetTree representation of the active 2D coordinate support for a GohFactor.
 public export
@@ -415,7 +415,7 @@ gohFactorPolySupportSize _ = 0
 public export
 makeSubDiagList : (count : Nat) -> (idx : Nat) -> List (Pixel, BoxInt)
 makeSubDiagList Z _ = []
-makeSubDiagList (S n) idx = (MkPixel (idx + 1) idx, intToBoxInt 1) :: makeSubDiagList n (S idx)
+makeSubDiagList (S n) idx = (mkPixel (idx + 1) idx, intToBoxInt 1) :: makeSubDiagList n (S idx)
 
 ||| Generates the column feedback entries for micro-matrix representation.
 public export
@@ -423,7 +423,7 @@ makeColEntriesList : (dim : Nat) -> (idx : Nat) -> Vect k BoxInt -> List (Pixel,
 makeColEntriesList _ _ [] = []
 makeColEntriesList dim idx (c :: cs) =
   if boxIsNonZero c
-     then (MkPixel idx dim, c) :: makeColEntriesList dim (S idx) cs
+     then (mkPixel idx dim, c) :: makeColEntriesList dim (S idx) cs
      else makeColEntriesList dim (S idx) cs
 
 ||| Constructs an N-dimensional companion Maxel matrix from feedback coefficients.
@@ -431,7 +431,7 @@ public export
 companionMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> Maxel
 companionMaxelFromFeedback Z [] = MkMaxel []
 companionMaxelFromFeedback 1 [c0] =
-  if boxIsZero c0 then MkMaxel [] else MkMaxel [(MkPixel 1 1, c0)]
+  if boxIsZero c0 then MkMaxel [] else MkMaxel [(mkPixel 1 1, c0)]
 companionMaxelFromFeedback (S (S k)) coeffs =
   let dim = S (S k)
       subDiag = makeSubDiagList (S k) 1

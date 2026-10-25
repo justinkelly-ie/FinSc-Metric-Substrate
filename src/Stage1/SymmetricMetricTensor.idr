@@ -94,8 +94,8 @@ makeSymmetricMetric dim weights =
   let step : BoxMultisetTree Pixel -> (Nat, BoxInt) -> BoxMultisetTree Pixel
       step acc (k, w) =
         let (i, j) = unpackMetricIndexDim dim k
-            acc1 = setBoxTree (MkPixel i j) w acc
-            acc2 = if i /= j then setBoxTree (MkPixel j i) w acc1 else acc1
+            acc1 = setBoxTree (mkPixel i j) w acc
+            acc2 = if i /= j then setBoxTree (mkPixel j i) w acc1 else acc1
         in acc2
       tree = foldl step BoxLeaf weights
   in MkSymmetricMetricTensor (MkBoxSquareMaxel tree)
@@ -119,8 +119,8 @@ stagedIdentityMetricTensor dim = quote (identityMetricTensor dim)
 public export
 perturbMetric00 : {dim : Nat} -> SymmetricMetricTensor dim -> BoxInt -> SymmetricMetricTensor dim
 perturbMetric00 (MkSymmetricMetricTensor (MkBoxSquareMaxel tree)) defect =
-  let cur = lookupBoxTree (MkPixel 0 0) tree
-      newTree = setBoxTree (MkPixel 0 0) (cur + defect) tree
+  let cur = lookupBoxTree (mkPixel 0 0) tree
+      newTree = setBoxTree (mkPixel 0 0) (cur + defect) tree
   in MkSymmetricMetricTensor (MkBoxSquareMaxel newTree)
 
 ------------------------------------------------------------------------
