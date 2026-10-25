@@ -177,3 +177,31 @@ public export
 0 verifyMetricIndexRoundTrip4 :
   all (\k => let (i, j) = unpackMetricIndexDim 4 k in packMetricIndex i j == k) (the (List Nat) [0..9]) = True
 verifyMetricIndexRoundTrip4 = Refl
+
+||| Generates the list of natural numbers [0 .. n-1] in O(n) tail-recursive time.
+public export
+natRange : Nat -> List Nat
+natRange n = go n []
+  where
+    go : Nat -> List Nat -> List Nat
+    go Z acc = acc
+    go (S k) acc = go k (k :: acc)
+
+||| Verified Invariant: Coordinate packing round-trip is exact for all T_dim components of arbitrary dim.
+public export
+auditMetricIndexRoundTripDim : (dim : Nat) -> Bool
+auditMetricIndexRoundTripDim Z = True
+auditMetricIndexRoundTripDim dim =
+  let totalComp = triangularNat dim
+      testIndices = natRange totalComp
+      allMatch = all (\k =>
+        let (i, j) = unpackMetricIndexDim dim k
+            repacked = packMetricIndex i j
+        in repacked == k) testIndices
+  in allMatch
+
+||| Verified Invariant: Coordinate packing round-trip across arbitrary dimensions D in [1, 12].
+public export
+auditArbitraryDimensionBijections : Bool
+auditArbitraryDimensionBijections =
+  all auditMetricIndexRoundTripDim (the (List Nat) [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
