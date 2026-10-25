@@ -15,7 +15,11 @@ import public Stage0.Singleton.SBFMset
 import public Stage0.Singleton.SingFraction
 
 import public Stage1.UnixelFraction
-import public Stage1.VexelMaxel
+import public Stage1.Basis.Coordinate
+import public Stage1.Carrier.Vexel
+import public Stage1.Carrier.Maxel
+import public Stage1.Carrier.Boxel
+import public Stage1.Carrier.BalanceArray
 import public Stage1.VexelStream
 import public Stage1.ProjectiveRotation
 import public Stage1.DihedronModel

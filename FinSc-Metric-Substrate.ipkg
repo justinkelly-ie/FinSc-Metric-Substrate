@@ -20,8 +20,6 @@ modules = MetricSubstrate,
           Stage0.Singleton.SBFMset,
           Stage0.Singleton.SingFraction,
 
-          Stage1.UnixelFraction,
-          Stage1.VexelMaxel,
           Stage1.VexelStream,
           Stage1.ProjectiveRotation,
           Stage1.DihedronModel,
