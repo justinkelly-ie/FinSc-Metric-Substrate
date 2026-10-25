@@ -43,31 +43,30 @@ packMetricIndex i j =
   let (iVal, jVal) = if i >= j then (i, j) else (j, i)
   in (triangularNat iVal) + jVal
 
+||| General coordinate unpacker for an arbitrary dimension `dim`:
+||| Given linear index k in [0, T_dim - 1], finds the canonical symmetric pair (i, j) with j <= i < dim.
+public export
+unpackMetricIndexDim : (dim : Nat) -> Nat -> (Nat, Nat)
+unpackMetricIndexDim dim k =
+  scan 0 dim
+  where
+    scan : Nat -> Nat -> (Nat, Nat)
+    scan cur Z = (if dim == 0 then 0 else minus dim 1, 0)
+    scan cur (S fuel) =
+      let tNext = triangularNat (S cur)
+      in if k < tNext
+           then (cur, minus k (triangularNat cur))
+           else scan (S cur) fuel
+
 ||| Unpacks a linear index k into the canonical symmetric pair (i, j) with j <= i for dim = 10.
 public export
 unpackMetricIndex10 : Nat -> (Nat, Nat)
-unpackMetricIndex10 k =
-  if k < 1  then (0, k)
-  else if k < 3  then (1, minus k 1)
-  else if k < 6  then (2, minus k 3)
-  else if k < 10 then (3, minus k 6)
-  else if k < 15 then (4, minus k 10)
-  else if k < 21 then (5, minus k 15)
-  else if k < 28 then (6, minus k 21)
-  else if k < 36 then (7, minus k 28)
-  else if k < 45 then (8, minus k 36)
-  else if k < 55 then (9, minus k 45)
-  else (9, 9)
+unpackMetricIndex10 = unpackMetricIndexDim 10
 
 ||| Unpacks a linear index k into the canonical symmetric pair (i, j) with j <= i for dim = 4.
 public export
 unpackMetricIndex4 : Nat -> (Nat, Nat)
-unpackMetricIndex4 k =
-  if k < 1  then (0, k)
-  else if k < 3  then (1, minus k 1)
-  else if k < 6  then (2, minus k 3)
-  else if k < 10 then (3, minus k 6)
-  else (3, 3)
+unpackMetricIndex4 = unpackMetricIndexDim 4
 
 ||| Complete list of all symmetric coordinate pairs (i, j) for an arbitrary dimension `dim`.
 public export
@@ -88,18 +87,23 @@ record SymmetricMetricTensor (dim : Nat) where
   constructor MkSymmetricMetricTensor
   metricMaxel : BoxSquareMaxel dim
 
-||| Constructs a SymmetricMetricTensor 10 from 55 independent component weights.
+||| Constructs a SymmetricMetricTensor dim from independent component weights.
 public export
-makeSymmetricMetric10 : List (Nat, BoxInt) -> SymmetricMetricTensor 10
-makeSymmetricMetric10 weights =
+makeSymmetricMetric : (dim : Nat) -> List (Nat, BoxInt) -> SymmetricMetricTensor dim
+makeSymmetricMetric dim weights =
   let step : BoxMultisetTree Pixel -> (Nat, BoxInt) -> BoxMultisetTree Pixel
       step acc (k, w) =
-        let (i, j) = unpackMetricIndex10 k
+        let (i, j) = unpackMetricIndexDim dim k
             acc1 = setBoxTree (MkPixel i j) w acc
             acc2 = if i /= j then setBoxTree (MkPixel j i) w acc1 else acc1
         in acc2
       tree = foldl step BoxLeaf weights
   in MkSymmetricMetricTensor (MkBoxSquareMaxel tree)
+
+||| Constructs a SymmetricMetricTensor 10 from 55 independent component weights.
+public export
+makeSymmetricMetric10 : List (Nat, BoxInt) -> SymmetricMetricTensor 10
+makeSymmetricMetric10 = makeSymmetricMetric 10
 
 ||| Flat Minkowski / Euclidean identity metric tensor of dimension `dim`.
 public export
@@ -161,3 +165,15 @@ auditMetricIndexRoundTrip55 =
             repacked = packMetricIndex i j
         in repacked == k) testIndices
   in allMatch
+
+||| Compile-time proof of exact round-trip for 10D (55 components):
+public export
+0 verifyMetricIndexRoundTrip10 :
+  all (\k => let (i, j) = unpackMetricIndexDim 10 k in packMetricIndex i j == k) (the (List Nat) [0..54]) = True
+verifyMetricIndexRoundTrip10 = Refl
+
+||| Compile-time proof of exact round-trip for 4D (10 components):
+public export
+0 verifyMetricIndexRoundTrip4 :
+  all (\k => let (i, j) = unpackMetricIndexDim 4 k in packMetricIndex i j == k) (the (List Nat) [0..9]) = True
+verifyMetricIndexRoundTrip4 = Refl
