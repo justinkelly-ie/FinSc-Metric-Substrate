@@ -6,7 +6,8 @@ import Stage0.BoxNat
 import Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
 import Stage1.MultisetTree as MT
-import Stage1.VexelMaxel as VM
+import Stage1.Basis.Coordinate
+import Stage1.Carrier.Maxel
 import Stage1.UnixelFraction as UF
 import Stage1.TypeTheory.Staging
 
@@ -134,15 +135,15 @@ rotateVectorScaled prop v =
 
 ||| Applies rotation to a typed 3D vector VexelN 3.
 public export
-rotateVexelN3 : ProjectiveProportion -> VM.VexelN 3 -> VM.VexelN 3
-rotateVexelN3 prop (VM.MkVexelN v) =
-  VM.MkVexelN (rotateVectorScaled prop v)
+rotateVexelN3 : ProjectiveProportion -> VexelN 3 -> VexelN 3
+rotateVexelN3 prop (MkVexelN v) =
+  MkVexelN (rotateVectorScaled prop v)
 
 ||| Converts the scaled rotation matrix into an AVL MultisetTree-backed SquareMaxel 3.
 public export
-rotationMaxelScaled3 : ProjectiveProportion -> VM.SquareMaxel 3
+rotationMaxelScaled3 : ProjectiveProportion -> SquareMaxel 3
 rotationMaxelScaled3 prop =
-  VM.maxelNToSquareMaxel (VM.MkMaxelN (rotationMatrixScaled3 prop))
+  maxelNToSquareMaxel (MkMaxelN (rotationMatrixScaled3 prop))
 
 ------------------------------------------------------------------------
 -- 3. DEFORESTED STREAMING ROTATIONS
@@ -150,7 +151,7 @@ rotationMaxelScaled3 prop =
 
 ||| Deforested stream transformer rotating a stream of 3D Vexel vectors in O(1) auxiliary memory.
 public export
-streamRotateVexelN3 : ProjectiveProportion -> FS.FusedStream (VM.VexelN 3) -> FS.FusedStream (VM.VexelN 3)
+streamRotateVexelN3 : ProjectiveProportion -> FS.FusedStream (VexelN 3) -> FS.FusedStream (VexelN 3)
 streamRotateVexelN3 prop =
   FS.mapStream (rotateVexelN3 prop)
 

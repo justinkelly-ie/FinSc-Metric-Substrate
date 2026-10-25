@@ -4,7 +4,10 @@ import public Stage0.BoxInt
 import public Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
 import Stage0.StructuralFuel
-import public Stage1.VexelMaxel
+import public Stage1.Basis.Coordinate
+import public Stage1.Carrier.Vexel
+import public Stage1.Carrier.Maxel
+import public Stage1.Carrier.Boxel
 import Data.List
 import Data.Vect
 import Language.Reflection
@@ -29,7 +32,7 @@ multisetBoundary1To0 (AddM (MkPixel u v) w rest) =
 
 ||| Canonical Maxel to Vexel boundary operator ∂₁ : Maxel -> Vexel.
 public export
-boundaryMaxelToVexel : Stage1.VexelMaxel.Maxel -> Vexel
+boundaryMaxelToVexel : Maxel -> Vexel
 boundaryMaxelToVexel m = multisetToVexel (multisetBoundary1To0 (maxelToMultiset m))
 
 ||| Pure Multiset Boundary operator ∂₂ : List Pixel -> Multiset BoxInt Pixel
@@ -41,7 +44,7 @@ multisetBoundary2To1 (p :: rest) = insertItemBox p (intToBoxInt 1) (multisetBoun
 
 ||| Canonical Plaquette to Maxel boundary operator ∂₂ : List Pixel -> Maxel.
 public export
-boundaryPlaquetteToMaxel : List Pixel -> Stage1.VexelMaxel.Maxel
+boundaryPlaquetteToMaxel : List Pixel -> Maxel
 boundaryPlaquetteToMaxel loopEdges = multisetToMaxel (multisetBoundary2To1 loopEdges)
 
 ||| Pure Multiset Second Boundary Operator ∂² mapping a 2-cell closed loop down to 0-cells.

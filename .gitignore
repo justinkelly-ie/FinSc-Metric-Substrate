@@ -3,3 +3,8 @@ depends/
 *.ttc
 *.ttm
 *.o
+# Additional generated artefacts
+*.so
+*.dyn
+
+

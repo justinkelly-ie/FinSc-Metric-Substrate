@@ -2,7 +2,9 @@ module Stage1.MetricSignature
 
 import Stage0.BoxInt
 import Stage0.Multiset
-import Stage1.VexelMaxel
+import Stage1.Basis.Coordinate
+import Stage1.Carrier.Vexel
+import Stage1.Carrier.Maxel
 import Data.Vect
 import Stage1.TypeTheory.Staging
 

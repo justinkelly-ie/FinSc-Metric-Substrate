@@ -6,7 +6,10 @@ import Stage0.BoxNat
 import Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
 import Stage1.MultisetTree as MT
-import Stage1.VexelMaxel as VM
+import Stage1.Carrier.Vexel
+import Stage1.Carrier.Maxel
+import Stage1.Carrier.Boxel
+import Stage1.Basis.Coordinate
 import Stage1.ProjectiveRotation as PR
 import Stage1.DihedronModel as DM
 
@@ -18,57 +21,57 @@ import Stage1.DihedronModel as DM
 
 ||| Deforested FusedStream view of a Vexel vector in O(1) auxiliary registers.
 public export
-streamVexel : VM.Vexel -> FS.FusedStream (VM.Unixel, BoxInt)
-streamVexel (VM.MkVexelTree t) = MT.streamBoxMultisetTree t
+streamVexel : Vexel -> FS.FusedStream (Unixel, BoxInt)
+streamVexel (MkVexelTree t) = MT.streamBoxMultisetTree t
 
 ||| Deforested FusedStream view of an AVL MultisetTree-backed SparseVexel vector.
 public export
-streamSparseVexel : VM.SparseVexel -> FS.FusedStream (VM.Unixel, BoxInt)
-streamSparseVexel (VM.MkSparseVexel t) =
+streamSparseVexel : SparseVexel -> FS.FusedStream (Unixel, BoxInt)
+streamSparseVexel (MkSparseVexel t) =
   FS.mapStream (\pair => let (u, cnt) = pair in (u, natToBoxInt cnt)) (MT.streamMultisetTreeDirect t)
 
 ||| Deforested FusedStream view of an AVL MultisetTree-backed SquareMaxel matrix.
 public export
-streamSquareMaxel : VM.SquareMaxel dim -> FS.FusedStream (VM.Pixel, BoxInt)
-streamSquareMaxel (VM.MkSquareMaxel t) =
+streamSquareMaxel : SquareMaxel dim -> FS.FusedStream (Pixel, BoxInt)
+streamSquareMaxel (MkSquareMaxel t) =
   FS.mapStream (\pair => let (p, cnt) = pair in (p, natToBoxInt cnt)) (MT.streamMultisetTreeDirect t)
 
 ||| Deforested FusedStream view of a Maxel matrix in O(1) auxiliary registers.
 public export
-streamMaxel : VM.Maxel -> FS.FusedStream (VM.Pixel, BoxInt)
-streamMaxel (VM.MkMaxelTree t) = MT.streamBoxMultisetTree t
+streamMaxel : Maxel -> FS.FusedStream (Pixel, BoxInt)
+streamMaxel (MkMaxelTree t) = MT.streamBoxMultisetTree t
 
 ||| Deforested FusedStream view of a Boxel volume tensor.
 public export
-streamBoxel : VM.Boxel -> FS.FusedStream (VM.Voxel, BoxInt)
-streamBoxel b = FS.multisetToStream (VM.boxelToMultiset b)
+streamBoxel : Boxel -> FS.FusedStream (Voxel, BoxInt)
+streamBoxel b = FS.multisetToStream (boxelToMultiset b)
 
 ||| Folds a FusedStream directly into an AVL MultisetTree-backed SparseVexel under BoxNat fuel bounds,
 ||| with zero intermediate List allocations.
 public export
-streamToSparseVexelBoxNat : BoxNat -> FS.FusedStream (VM.Unixel, BoxInt) -> VM.SparseVexel
+streamToSparseVexelBoxNat : BoxNat -> FS.FusedStream (Unixel, BoxInt) -> SparseVexel
 streamToSparseVexelBoxNat fuel strm =
   let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
             let (u, w) = pair
             in if boxIsZero w then tree
                else MT.insertTokenTree u (boxToNat w) tree
           ) MT.Leaf strm
-  in VM.MkSparseVexel t
+  in MkSparseVexel t
 
 ||| Folds a FusedStream directly into an AVL MultisetTree-backed SquareMaxel under BoxNat fuel bounds.
 public export
-streamToSquareMaxelBoxNat : {dim : Nat} -> BoxNat -> FS.FusedStream (VM.Pixel, BoxInt) -> VM.SquareMaxel dim
+streamToSquareMaxelBoxNat : {dim : Nat} -> BoxNat -> FS.FusedStream (Pixel, BoxInt) -> SquareMaxel dim
 streamToSquareMaxelBoxNat fuel strm =
   let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
             let (p, w) = pair
             in if boxIsZero w then tree
                else MT.insertTokenTree p (boxToNat w) tree
           ) MT.Leaf strm
-  in VM.MkSquareMaxel t
+  in MkSquareMaxel t
 
 ||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed Vexel under BoxNat fuel bounds.
 public export
-streamToVexelBoxNat : BoxNat -> FS.FusedStream (VM.Unixel, BoxInt) -> VM.Vexel
+streamToVexelBoxNat : BoxNat -> FS.FusedStream (Unixel, BoxInt) -> Vexel
 streamToVexelBoxNat fuel strm =
   let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
             let (u, w) = pair
@@ -79,11 +82,11 @@ streamToVexelBoxNat fuel strm =
                          then MT.setBoxTree u (intToBoxInt 0) tree
                          else MT.setBoxTree u newW tree
           ) MT.BoxLeaf strm
-  in VM.MkVexelTree t
+  in MkVexelTree t
 
 ||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed Maxel under BoxNat fuel bounds.
 public export
-streamToMaxelBoxNat : BoxNat -> FS.FusedStream (VM.Pixel, BoxInt) -> VM.Maxel
+streamToMaxelBoxNat : BoxNat -> FS.FusedStream (Pixel, BoxInt) -> Maxel
 streamToMaxelBoxNat fuel strm =
   let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
             let (p, w) = pair
@@ -94,14 +97,14 @@ streamToMaxelBoxNat fuel strm =
                          then MT.setBoxTree p (intToBoxInt 0) tree
                          else MT.setBoxTree p newW tree
           ) MT.BoxLeaf strm
-  in VM.MkMaxelTree t
+  in MkMaxelTree t
 
 ||| Folds a FusedStream into a Boxel under BoxNat fuel bounds.
 public export
-streamToBoxelBoxNat : BoxNat -> FS.FusedStream (VM.Voxel, BoxInt) -> VM.Boxel
+streamToBoxelBoxNat : BoxNat -> FS.FusedStream (Voxel, BoxInt) -> Boxel
 streamToBoxelBoxNat fuel strm =
   let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, pair => let (v, w) = pair in insertItemBox v w acc) ZeroM strm
-  in VM.multisetToBoxel m
+  in multisetToBoxel m
 
 ------------------------------------------------------------------------
 -- WILDBERGER SUPPORT STREAM EXTRACTORS (RULE 04 SECTION 8)
@@ -110,20 +113,20 @@ streamToBoxelBoxNat fuel strm =
 ||| Deforested zero-allocation stream extractor for the active support of a Maxel stream.
 ||| Emits strictly non-zero directed coordinate cells without intermediate list allocations (Rule 04).
 public export
-supportMaxelStream : FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream VM.Pixel
+supportMaxelStream : FS.FusedStream (Pixel, BoxInt) -> FS.FusedStream Pixel
 supportMaxelStream =
   FS.filterMapStream (\(px, w) => if boxIsNonZero w then Just px else Nothing)
 
 ||| Deforested zero-allocation stream extractor for the active support of a Vexel stream.
 ||| Emits strictly non-zero basis Unixels without intermediate list allocations.
 public export
-supportVexelStream : FS.FusedStream (VM.Unixel, BoxInt) -> FS.FusedStream VM.Unixel
+supportVexelStream : FS.FusedStream (Unixel, BoxInt) -> FS.FusedStream Unixel
 supportVexelStream =
   FS.filterMapStream (\(u, w) => if boxIsNonZero w then Just u else Nothing)
 
 ||| Deforested zero-allocation stream extractor for the active support of a Boxel stream.
 public export
-supportBoxelStream : FS.FusedStream (VM.Voxel, BoxInt) -> FS.FusedStream VM.Voxel
+supportBoxelStream : FS.FusedStream (Voxel, BoxInt) -> FS.FusedStream Voxel
 supportBoxelStream =
   FS.filterMapStream (\(vx, w) => if boxIsNonZero w then Just vx else Nothing)
 
@@ -133,30 +136,30 @@ supportBoxelStream =
 
 ||| Scales a Maxel pixel stream by a BoxInt scalar with zero intermediate allocations.
 public export
-scaleMaxelStream : BoxInt -> FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream (VM.Pixel, BoxInt)
+scaleMaxelStream : BoxInt -> FS.FusedStream (Pixel, BoxInt) -> FS.FusedStream (Pixel, BoxInt)
 scaleMaxelStream s =
   FS.mapStream (\(p, w) => (p, s * w))
 
 ||| Scales a Vexel basis stream by a BoxInt scalar with zero intermediate allocations.
 public export
-scaleVexelStream : BoxInt -> FS.FusedStream (VM.Unixel, BoxInt) -> FS.FusedStream (VM.Unixel, BoxInt)
+scaleVexelStream : BoxInt -> FS.FusedStream (Unixel, BoxInt) -> FS.FusedStream (Unixel, BoxInt)
 scaleVexelStream s =
   FS.mapStream (\(u, w) => (u, s * w))
 
 ||| Streams a balanced MaxelTree directly into a FusedStream in O(log N) stack frames.
 public export
-streamMaxelTreeDirect : VM.MaxelTree -> FS.FusedStream (VM.Pixel, BoxInt)
+streamMaxelTreeDirect : MaxelTree -> FS.FusedStream (Pixel, BoxInt)
 streamMaxelTreeDirect tree =
   FS.mapStream (\(p, cnt) => (p, natToBoxInt cnt)) (MT.streamMultisetTreeDirect tree)
 
 ||| Deforested discrete matrix multiplication stream transformer:
 ||| Multiplies a left Pixel stream by a right Pixel stream without intermediate list materialization.
 public export
-mulMaxelStream : FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream (VM.Pixel, BoxInt) -> FS.FusedStream (VM.Pixel, BoxInt)
+mulMaxelStream : FS.FusedStream (Pixel, BoxInt) -> FS.FusedStream (Pixel, BoxInt) -> FS.FusedStream (Pixel, BoxInt)
 mulMaxelStream leftStream rightStream =
   FS.flatMapStream (\(p1, w1) =>
     FS.filterMapStream (\(p2, w2) =>
-      case VM.mulPixel p1 p2 of
+      case mulPixel p1 p2 of
         Just pOut => Just (pOut, w1 * w2)
         Nothing   => Nothing) rightStream) leftStream
 ------------------------------------------------------------------------
@@ -173,16 +176,16 @@ interface SparseCarrier c coord | c where
   fromStream : BoxNat -> FS.FusedStream (coord, BoxInt) -> c
 
 public export
-SparseCarrier VM.SparseVexel VM.Unixel where
-  toTree (VM.MkSparseVexel t) = t
-  fromTree t = VM.MkSparseVexel t
+SparseCarrier SparseVexel Unixel where
+  toTree (MkSparseVexel t) = t
+  fromTree t = MkSparseVexel t
   toStream = streamSparseVexel
   fromStream = streamToSparseVexelBoxNat
 
 public export
-{dim : Nat} -> SparseCarrier (VM.SquareMaxel dim) VM.Pixel where
-  toTree (VM.MkSquareMaxel t) = t
-  fromTree t = VM.MkSquareMaxel t
+{dim : Nat} -> SparseCarrier (SquareMaxel dim) Pixel where
+  toTree (MkSquareMaxel t) = t
+  fromTree t = MkSquareMaxel t
   toStream = streamSquareMaxel
   fromStream = streamToSquareMaxelBoxNat
 
@@ -192,7 +195,7 @@ public export
 
 ||| Deforested stream transformer rotating a stream of 3D Vexel vectors in O(1) auxiliary registers.
 public export
-streamRotateVexelN3 : PR.ProjectiveProportion -> FS.FusedStream (VM.VexelN 3) -> FS.FusedStream (VM.VexelN 3)
+streamRotateVexelN3 : PR.ProjectiveProportion -> FS.FusedStream (VexelN 3) -> FS.FusedStream (VexelN 3)
 streamRotateVexelN3 prop =
   FS.mapStream (PR.rotateVexelN3 prop)
 

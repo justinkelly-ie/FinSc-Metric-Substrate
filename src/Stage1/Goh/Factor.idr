@@ -7,7 +7,8 @@ import Stage0.StreamPolynumber
 import Stage0.OnSeq.FusedStream as FS
 import Stage1.UnixelFraction
 import Stage1.FourGeometries
-import Stage1.VexelMaxel as VM
+import Stage1.Carrier.Maxel
+import Stage1.Basis.Coordinate
 import Stage1.VexelStream as VS
 import Stage1.MultisetTree
 import Data.Vect
@@ -356,32 +357,32 @@ gohFactorPolySupportStream f =
 
 ||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 2 (dim 1).
 public export
-factor2SupportTree : MultisetTree VM.Pixel
-factor2SupportTree = Node 1 Leaf (VM.MkPixel 1 1) 1 Leaf
+factor2SupportTree : MultisetTree Pixel
+factor2SupportTree = Node 1 Leaf (MkPixel 1 1) 1 Leaf
 
 ||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 3 (dim 2).
 public export
-factor3SupportTree : MultisetTree VM.Pixel
+factor3SupportTree : MultisetTree Pixel
 factor3SupportTree =
-  Node 2 (Node 1 Leaf (VM.MkPixel 1 2) 1 Leaf)
-         (VM.MkPixel 2 1) 1
-         (Node 1 Leaf (VM.MkPixel 2 2) 1 Leaf)
+  Node 2 (Node 1 Leaf (MkPixel 1 2) 1 Leaf)
+         (MkPixel 2 1) 1
+         (Node 1 Leaf (MkPixel 2 2) 1 Leaf)
 
 ||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 5 (dim 4).
 public export
-factor5SupportTree : MultisetTree VM.Pixel
+factor5SupportTree : MultisetTree Pixel
 factor5SupportTree =
-  let leftSub = Node 2 (Node 1 Leaf (VM.MkPixel 1 4) 1 Leaf)
-                       (VM.MkPixel 2 1) 1
-                       (Node 1 Leaf (VM.MkPixel 2 4) 1 Leaf)
-      rightSub = Node 2 (Node 1 Leaf (VM.MkPixel 3 4) 1 Leaf)
-                        (VM.MkPixel 4 3) 1
-                        (Node 1 Leaf (VM.MkPixel 4 4) 1 Leaf)
-  in Node 3 leftSub (VM.MkPixel 3 2) 1 rightSub
+  let leftSub = Node 2 (Node 1 Leaf (MkPixel 1 4) 1 Leaf)
+                       (MkPixel 2 1) 1
+                       (Node 1 Leaf (MkPixel 2 4) 1 Leaf)
+      rightSub = Node 2 (Node 1 Leaf (MkPixel 3 4) 1 Leaf)
+                        (MkPixel 4 3) 1
+                        (Node 1 Leaf (MkPixel 4 4) 1 Leaf)
+  in Node 3 leftSub (MkPixel 3 2) 1 rightSub
 
 ||| O(log N) AVL MultisetTree representation of the active 2D coordinate support for a GohFactor.
 public export
-gohFactorSupportTree : {p : Nat} -> GohFactor p -> MultisetTree VM.Pixel
+gohFactorSupportTree : {p : Nat} -> GohFactor p -> MultisetTree Pixel
 gohFactorSupportTree {p = 2} _ = factor2SupportTree
 gohFactorSupportTree {p = 3} _ = factor3SupportTree
 gohFactorSupportTree {p = 5} _ = factor5SupportTree
@@ -390,7 +391,7 @@ gohFactorSupportTree _ = Leaf
 ||| Streams the active 2D coordinate support pixels of an irreducible GohFactor in O(1) registers
 ||| directly from its balanced MultisetTree without intermediate list allocation.
 public export
-gohFactorSupportStream : {p : Nat} -> GohFactor p -> FS.FusedStream VM.Pixel
+gohFactorSupportStream : {p : Nat} -> GohFactor p -> FS.FusedStream Pixel
 gohFactorSupportStream f =
   FS.mapStream fst (streamMultisetTreeDirect (gohFactorSupportTree f))
 
@@ -412,46 +413,46 @@ gohFactorPolySupportSize _ = 0
 
 ||| Generates the subdiagonal shift entries for micro-matrix representation.
 public export
-makeSubDiagList : (count : Nat) -> (idx : Nat) -> List (VM.Pixel, BoxInt)
+makeSubDiagList : (count : Nat) -> (idx : Nat) -> List (Pixel, BoxInt)
 makeSubDiagList Z _ = []
-makeSubDiagList (S n) idx = (VM.MkPixel (idx + 1) idx, intToBoxInt 1) :: makeSubDiagList n (S idx)
+makeSubDiagList (S n) idx = (MkPixel (idx + 1) idx, intToBoxInt 1) :: makeSubDiagList n (S idx)
 
 ||| Generates the column feedback entries for micro-matrix representation.
 public export
-makeColEntriesList : (dim : Nat) -> (idx : Nat) -> Vect k BoxInt -> List (VM.Pixel, BoxInt)
+makeColEntriesList : (dim : Nat) -> (idx : Nat) -> Vect k BoxInt -> List (Pixel, BoxInt)
 makeColEntriesList _ _ [] = []
 makeColEntriesList dim idx (c :: cs) =
   if boxIsNonZero c
-     then (VM.MkPixel idx dim, c) :: makeColEntriesList dim (S idx) cs
+     then (MkPixel idx dim, c) :: makeColEntriesList dim (S idx) cs
      else makeColEntriesList dim (S idx) cs
 
 ||| Constructs an N-dimensional companion Maxel matrix from feedback coefficients.
 public export
-companionMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> VM.Maxel
-companionMaxelFromFeedback Z [] = VM.MkMaxel []
+companionMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> Maxel
+companionMaxelFromFeedback Z [] = MkMaxel []
 companionMaxelFromFeedback 1 [c0] =
-  if boxIsZero c0 then VM.MkMaxel [] else VM.MkMaxel [(VM.MkPixel 1 1, c0)]
+  if boxIsZero c0 then MkMaxel [] else MkMaxel [(MkPixel 1 1, c0)]
 companionMaxelFromFeedback (S (S k)) coeffs =
   let dim = S (S k)
       subDiag = makeSubDiagList (S k) 1
       colEntries = makeColEntriesList dim 1 coeffs
-  in VM.MkMaxel (subDiag ++ colEntries)
+  in MkMaxel (subDiag ++ colEntries)
 
 ||| Constructs the canonical 2D companion Maxel directly from an irreducible GohFactor.
 public export
-gohFactorToCompanionMaxel : {p : Nat} -> GohFactor p -> VM.Maxel
+gohFactorToCompanionMaxel : {p : Nat} -> GohFactor p -> Maxel
 gohFactorToCompanionMaxel {p} f =
   companionMaxelFromFeedback (gohDegree p) (gohFactorFeedbackCoeffs p f)
 
 ||| Constructs a dimension-indexed companion SquareMaxel directly from feedback coefficients.
 public export
-companionSquareMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> VM.SquareMaxel dim
+companionSquareMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> SquareMaxel dim
 companionSquareMaxelFromFeedback dim coeffs =
-  VM.maxelToSquareMaxel dim (companionMaxelFromFeedback dim coeffs)
+  maxelToSquareMaxel dim (companionMaxelFromFeedback dim coeffs)
 
 ||| Constructs a dimension-indexed companion SquareMaxel from an irreducible GohFactor.
 public export
-gohFactorToCompanionSquareMaxel : {p : Nat} -> GohFactor p -> VM.SquareMaxel (gohDegree p)
+gohFactorToCompanionSquareMaxel : {p : Nat} -> GohFactor p -> SquareMaxel (gohDegree p)
 gohFactorToCompanionSquareMaxel {p} f =
   companionSquareMaxelFromFeedback (gohDegree p) (gohFactorFeedbackCoeffs p f)
 
