@@ -115,6 +115,24 @@ public export
 stagedIdentityMetricTensor : (dim : Nat) -> Code (SymmetricMetricTensor dim)
 stagedIdentityMetricTensor dim = quote (identityMetricTensor dim)
 
+||| 2LTT Staged Bilinear Metric Contraction: v^T · g · w on 2D coordinates.
+||| Uses 2LTT staged unrolling to compute (v0*w0)*g00 + (v1*w1)*g11 without AVL lookups.
+public export
+stagedContractMetric2D : Lift (CoordCell 2) -> Lift (CoordCell 2) -> Lift BoxInt -> Lift BoxInt -> Lift Nat
+stagedContractMetric2D qv qw qg00 qg11 =
+  quote (let v = splice qv; w = splice qw
+             g0 = integerToNat (unwrapBox (splice qg00))
+             g1 = integerToNat (unwrapBox (splice qg11))
+             c0 = (coordAxis 0 v * coordAxis 0 w) * g0
+             c1 = (coordAxis 1 v * coordAxis 1 w) * g1
+         in c0 + c1)
+
+||| Exact bilinear metric contraction over 2D coordinates.
+public export
+contractMetric2D : CoordCell 2 -> CoordCell 2 -> BoxInt -> BoxInt -> Nat
+contractMetric2D v w g00 g11 =
+  splice (stagedContractMetric2D (quote v) (quote w) (quote g00) (quote g11))
+
 ||| Perturbs the (0, 0) timelike metric entry with energy-momentum curvature back-reaction.
 public export
 perturbMetric00 : {dim : Nat} -> SymmetricMetricTensor dim -> BoxInt -> SymmetricMetricTensor dim

@@ -1,5 +1,7 @@
 module Stage0.Pixel
 
+import Stage1.Basis.Coordinate
+
 %default total
 
 public export
@@ -51,4 +53,18 @@ public export
 mulPixel : Eq a => Pixel metric a -> Pixel metric a -> Maybe (Pixel metric a)
 mulPixel (MkPixel a b) (MkPixel c d) =
   if b == c then Just (MkPixel a d) else Nothing
+
+------------------------------------------------------------------------
+-- BRIDGES TO CANONICAL COORDCELL (STAGE1.BASIS.COORDINATE)
+------------------------------------------------------------------------
+
+||| Bridge from legacy MetricPixel to canonical CoordCell 2.
+public export
+metricPixelToCell2 : MetricPixel m Nat -> CoordCell 2
+metricPixelToCell2 (MkPixel s t) = mkCell2 s t
+
+||| Bridge from canonical CoordCell 2 to legacy MetricPixel.
+public export
+cell2ToMetricPixel : {0 m : Metric} -> CoordCell 2 -> MetricPixel m Nat
+cell2ToMetricPixel c = MkPixel (coordAxis 0 c) (coordAxis 1 c)
 

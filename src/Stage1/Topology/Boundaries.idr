@@ -25,39 +25,54 @@ import Language.Reflection
 ||| mapping an edge multiset (1-cells) to its vertex multiset boundary (0-cells).
 ||| For each directed edge [u -> v] with weight w, ∂₁([u -> v]) = +w [v] - w [u].
 public export
-multisetBoundary1To0 : Multiset BoxInt Pixel -> Multiset BoxInt Unixel
+multisetBoundary1To0 : Multiset BoxInt (CoordCell 2) -> Multiset BoxInt (CoordCell 1)
 multisetBoundary1To0 ZeroM = ZeroM
 multisetBoundary1To0 (AddM p w rest) =
-  let u = pixelRow p
-      v = pixelCol p
-  in insertItemBox (mkUnixel v) w (insertItemBox (mkUnixel u) (negBox w) (multisetBoundary1To0 rest))
+  let u = coordAxis 0 p
+      v = coordAxis 1 p
+  in insertItemBox (mkCell1 v) w (insertItemBox (mkCell1 u) (negBox w) (multisetBoundary1To0 rest))
 
 ||| Canonical Maxel to Vexel boundary operator ∂₁ : Maxel -> Vexel.
 public export
 boundaryMaxelToVexel : Maxel -> Vexel
 boundaryMaxelToVexel m = multisetToVexel (multisetBoundary1To0 (maxelToMultiset m))
 
+||| Universal 1-cell to 0-cell boundary operator on CellMultiset carriers.
+public export
+boundaryCell1To0 : CellMultiset 2 -> CellMultiset 1
+boundaryCell1To0 mTree = (boundaryMaxelToVexel (MkMaxelTree mTree)).tree
+
 ||| Pure Multiset Boundary operator ∂₂ : List Pixel -> Multiset BoxInt Pixel
 ||| mapping a 2-cell (closed edge loop) to its edge multiset boundary (1-cells).
 public export
-multisetBoundary2To1 : List Pixel -> Multiset BoxInt Pixel
+multisetBoundary2To1 : List (CoordCell 2) -> Multiset BoxInt (CoordCell 2)
 multisetBoundary2To1 [] = ZeroM
 multisetBoundary2To1 (p :: rest) = insertItemBox p (intToBoxInt 1) (multisetBoundary2To1 rest)
 
 ||| Canonical Plaquette to Maxel boundary operator ∂₂ : List Pixel -> Maxel.
 public export
-boundaryPlaquetteToMaxel : List Pixel -> Maxel
+boundaryPlaquetteToMaxel : List (CoordCell 2) -> Maxel
 boundaryPlaquetteToMaxel loopEdges = multisetToMaxel (multisetBoundary2To1 loopEdges)
+
+||| Universal 2-cell to 1-cell boundary operator on CellMultiset carriers.
+public export
+boundaryCell2To1 : List (CoordCell 2) -> CellMultiset 2
+boundaryCell2To1 loopEdges = (boundaryPlaquetteToMaxel loopEdges).tree
 
 ||| Pure Multiset Second Boundary Operator ∂² mapping a 2-cell closed loop down to 0-cells.
 public export
-multisetBoundaryChain2To0 : List Pixel -> Multiset BoxInt Unixel
+multisetBoundaryChain2To0 : List (CoordCell 2) -> Multiset BoxInt (CoordCell 1)
 multisetBoundaryChain2To0 loopEdges = multisetBoundary1To0 (multisetBoundary2To1 loopEdges)
 
 ||| Canonical Plaquette to Vexel second boundary operator ∂² : List Pixel -> Vexel.
 public export
-boundaryPlaquetteToVexel : List Pixel -> Vexel
+boundaryPlaquetteToVexel : List (CoordCell 2) -> Vexel
 boundaryPlaquetteToVexel loopEdges = multisetToVexel (multisetBoundaryChain2To0 loopEdges)
+
+||| Universal 2-cell to 0-cell second boundary operator on CellMultiset carriers (∂² = 0).
+public export
+boundaryCell2To0 : List (CoordCell 2) -> CellMultiset 1
+boundaryCell2To0 loopEdges = (boundaryPlaquetteToVexel loopEdges).tree
 
 --------------------------------------------------------------------------------
 -- 2. DISCRETE EXTERIOR CALCULUS (DEC) COBOUNDARY OPERATORS (d₀, d₁)
@@ -67,13 +82,13 @@ boundaryPlaquetteToVexel loopEdges = multisetToVexel (multisetBoundaryChain2To0 
 ||| mapping a 0-cochain vertex potential Φ to a 1-cochain directed edge field (gradient).
 ||| For each directed edge [u -> v], (d₀ Φ)[u -> v] = Φ(v) - Φ(u).
 public export
-multisetCoboundary0To1 : List Pixel -> Multiset BoxInt Unixel -> Multiset BoxInt Pixel
+multisetCoboundary0To1 : List (CoordCell 2) -> Multiset BoxInt (CoordCell 1) -> Multiset BoxInt (CoordCell 2)
 multisetCoboundary0To1 [] _ = ZeroM
 multisetCoboundary0To1 (p :: rest) phi =
-  let u = pixelRow p
-      v = pixelCol p
-      phiU = lookupCountBox (mkUnixel u) phi
-      phiV = lookupCountBox (mkUnixel v) phi
+  let u = coordAxis 0 p
+      v = coordAxis 1 p
+      phiU = lookupCountBox (mkCell1 u) phi
+      phiV = lookupCountBox (mkCell1 v) phi
       diff = subBox phiV phiU
   in case diff of
        MkBoxInt 0 => multisetCoboundary0To1 rest phi

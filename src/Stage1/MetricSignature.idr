@@ -136,6 +136,12 @@ signatureQuadrance2D sig x y =
       qy = mulBox w1 (mulBox y y)
   in addBox qx qy
 
+||| Evaluates the exact 2D Quadrance of a CoordCell 2 under a MetricSignature.
+public export
+signatureCellQuadrance2D : MetricSignature -> CoordCell 2 -> BoxInt
+signatureCellQuadrance2D sig c =
+  signatureQuadrance2D sig (natToBoxInt (coordAxis 0 c)) (natToBoxInt (coordAxis 1 c))
+
 ------------------------------------------------------------------------
 -- 5. TYPE-LEVEL PROOFS & WITNESSES
 ------------------------------------------------------------------------
