@@ -22,7 +22,7 @@ import Stage1.DihedronModel as DM
 ||| Deforested FusedStream view of a Vexel vector in O(1) auxiliary registers.
 public export
 streamVexel : Vexel -> FS.FusedStream (Unixel, BoxInt)
-streamVexel (MkVexelTree t) = MT.streamBoxMultisetTree t
+streamVexel t = MT.streamBoxMultisetTree t
 
 ||| Deforested FusedStream view of an AVL MultisetTree-backed SparseVexel vector.
 public export
@@ -39,12 +39,13 @@ streamSquareMaxel (MkSquareMaxel t) =
 ||| Deforested FusedStream view of a Maxel matrix in O(1) auxiliary registers.
 public export
 streamMaxel : Maxel -> FS.FusedStream (Pixel, BoxInt)
-streamMaxel (MkMaxelTree t) = MT.streamBoxMultisetTree t
+streamMaxel t = MT.streamBoxMultisetTree t
 
 ||| Deforested FusedStream view of a Boxel volume tensor.
 public export
 streamBoxel : Boxel -> FS.FusedStream (Voxel, BoxInt)
-streamBoxel b = FS.multisetToStream (boxelToMultiset b)
+streamBoxel t = MT.streamBoxMultisetTree t
+
 
 ||| Folds a FusedStream directly into an AVL MultisetTree-backed SparseVexel under BoxNat fuel bounds,
 ||| with zero intermediate List allocations.

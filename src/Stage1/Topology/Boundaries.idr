@@ -40,7 +40,7 @@ boundaryMaxelToVexel m = multisetToVexel (multisetBoundary1To0 (maxelToMultiset 
 ||| Universal 1-cell to 0-cell boundary operator on CellMultiset carriers.
 public export
 boundaryCell1To0 : CellMultiset 2 -> CellMultiset 1
-boundaryCell1To0 mTree = (boundaryMaxelToVexel (MkMaxelTree mTree)).tree
+boundaryCell1To0 = boundaryMaxelToVexel
 
 ||| Pure Multiset Boundary operator ∂₂ : List Pixel -> Multiset BoxInt Pixel
 ||| mapping a 2-cell (closed edge loop) to its edge multiset boundary (1-cells).
@@ -57,7 +57,7 @@ boundaryPlaquetteToMaxel loopEdges = multisetToMaxel (multisetBoundary2To1 loopE
 ||| Universal 2-cell to 1-cell boundary operator on CellMultiset carriers.
 public export
 boundaryCell2To1 : List (CoordCell 2) -> CellMultiset 2
-boundaryCell2To1 loopEdges = (boundaryPlaquetteToMaxel loopEdges).tree
+boundaryCell2To1 = boundaryPlaquetteToMaxel
 
 ||| Pure Multiset Second Boundary Operator ∂² mapping a 2-cell closed loop down to 0-cells.
 public export
@@ -72,7 +72,7 @@ boundaryPlaquetteToVexel loopEdges = multisetToVexel (multisetBoundaryChain2To0 
 ||| Universal 2-cell to 0-cell second boundary operator on CellMultiset carriers (∂² = 0).
 public export
 boundaryCell2To0 : List (CoordCell 2) -> CellMultiset 1
-boundaryCell2To0 loopEdges = (boundaryPlaquetteToVexel loopEdges).tree
+boundaryCell2To0 = boundaryPlaquetteToVexel
 
 --------------------------------------------------------------------------------
 -- 2. DISCRETE EXTERIOR CALCULUS (DEC) COBOUNDARY OPERATORS (d₀, d₁)
