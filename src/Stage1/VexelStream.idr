@@ -19,10 +19,24 @@ import Stage1.DihedronModel as DM
 -- 2LTT STREAMING MULTISET VIEWS & BOXNAT CARRIERS
 ------------------------------------------------------------------------
 
+||| Universal deforested FusedStream view of any CellMultiset dim in O(1) auxiliary registers.
+public export
+streamCellMultiset : {dim : Nat} -> CellMultiset dim -> FS.FusedStream (CoordCell dim, BoxInt)
+streamCellMultiset t = MT.streamBoxMultisetTree t
+
+||| Folds a deforested FusedStream directly into a CellMultiset dim with zero intermediate List allocations.
+public export
+streamToCellMultiset : {dim : Nat} -> FS.FusedStream (CoordCell dim, BoxInt) -> CellMultiset dim
+streamToCellMultiset strm =
+  FS.foldStream (\acc, (c, w) =>
+    if boxIsZero w then acc
+    else setBoxTree c (lookupBoxTree c acc + w) acc
+  ) BoxLeaf strm
+
 ||| Deforested FusedStream view of a Vexel vector in O(1) auxiliary registers.
 public export
 streamVexel : Vexel -> FS.FusedStream (Unixel, BoxInt)
-streamVexel t = MT.streamBoxMultisetTree t
+streamVexel = streamCellMultiset
 
 ||| Deforested FusedStream view of an AVL MultisetTree-backed SparseVexel vector.
 public export
@@ -39,12 +53,12 @@ streamSquareMaxel (MkSquareMaxel t) =
 ||| Deforested FusedStream view of a Maxel matrix in O(1) auxiliary registers.
 public export
 streamMaxel : Maxel -> FS.FusedStream (Pixel, BoxInt)
-streamMaxel t = MT.streamBoxMultisetTree t
+streamMaxel = streamCellMultiset
 
 ||| Deforested FusedStream view of a Boxel volume tensor.
 public export
 streamBoxel : Boxel -> FS.FusedStream (Voxel, BoxInt)
-streamBoxel t = MT.streamBoxMultisetTree t
+streamBoxel = streamCellMultiset
 
 
 ||| Folds a FusedStream directly into an AVL MultisetTree-backed SparseVexel under BoxNat fuel bounds,
@@ -70,42 +84,34 @@ streamToSquareMaxelBoxNat fuel strm =
           ) MT.Leaf strm
   in MkSquareMaxel t
 
+||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed CellMultiset under BoxNat fuel bounds,
+||| with zero intermediate List allocations.
+public export
+streamToCellMultisetBoxNat : {dim : Nat} -> BoxNat -> FS.FusedStream (CoordCell dim, BoxInt) -> CellMultiset dim
+streamToCellMultisetBoxNat fuel strm =
+  FS.foldStreamNat (boxNatToNat fuel) (\tree, (c, w) =>
+    if boxIsZero w then tree
+    else let cur = MT.lookupBoxTree c tree
+             newW = cur + w
+         in if boxIsZero newW
+              then MT.setBoxTree c (intToBoxInt 0) tree
+              else MT.setBoxTree c newW tree
+  ) MT.BoxLeaf strm
+
 ||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed Vexel under BoxNat fuel bounds.
 public export
 streamToVexelBoxNat : BoxNat -> FS.FusedStream (Unixel, BoxInt) -> Vexel
-streamToVexelBoxNat fuel strm =
-  let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
-            let (u, w) = pair
-            in if boxIsZero w then tree
-               else let cur = MT.lookupBoxTree u tree
-                        newW = cur + w
-                    in if boxIsZero newW
-                         then MT.setBoxTree u (intToBoxInt 0) tree
-                         else MT.setBoxTree u newW tree
-          ) MT.BoxLeaf strm
-  in MkVexelTree t
+streamToVexelBoxNat = streamToCellMultisetBoxNat
 
 ||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed Maxel under BoxNat fuel bounds.
 public export
 streamToMaxelBoxNat : BoxNat -> FS.FusedStream (Pixel, BoxInt) -> Maxel
-streamToMaxelBoxNat fuel strm =
-  let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
-            let (p, w) = pair
-            in if boxIsZero w then tree
-               else let cur = MT.lookupBoxTree p tree
-                        newW = cur + w
-                    in if boxIsZero newW
-                         then MT.setBoxTree p (intToBoxInt 0) tree
-                         else MT.setBoxTree p newW tree
-          ) MT.BoxLeaf strm
-  in MkMaxelTree t
+streamToMaxelBoxNat = streamToCellMultisetBoxNat
 
-||| Folds a FusedStream into a Boxel under BoxNat fuel bounds.
+||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed Boxel under BoxNat fuel bounds.
 public export
 streamToBoxelBoxNat : BoxNat -> FS.FusedStream (Voxel, BoxInt) -> Boxel
-streamToBoxelBoxNat fuel strm =
-  let m = FS.foldStreamNat (boxNatToNat fuel) (\acc, pair => let (v, w) = pair in insertItemBox v w acc) ZeroM strm
-  in multisetToBoxel m
+streamToBoxelBoxNat = streamToCellMultisetBoxNat
 
 ------------------------------------------------------------------------
 -- WILDBERGER SUPPORT STREAM EXTRACTORS (RULE 04 SECTION 8)

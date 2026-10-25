@@ -32,15 +32,23 @@ multisetBoundary1To0 (AddM p w rest) =
       v = coordAxis 1 p
   in insertItemBox (mkCell1 v) w (insertItemBox (mkCell1 u) (negBox w) (multisetBoundary1To0 rest))
 
-||| Canonical Maxel to Vexel boundary operator ∂₁ : Maxel -> Vexel.
-public export
-boundaryMaxelToVexel : Maxel -> Vexel
-boundaryMaxelToVexel m = multisetToVexel (multisetBoundary1To0 (maxelToMultiset m))
-
 ||| Universal 1-cell to 0-cell boundary operator on CellMultiset carriers.
+||| Maps directed edge [u -> v] with weight w to vertex boundary differences +w [v] - w [u].
 public export
 boundaryCell1To0 : CellMultiset 2 -> CellMultiset 1
-boundaryCell1To0 = boundaryMaxelToVexel
+boundaryCell1To0 edges =
+  foldBoxTreeL (\acc, (p, w) =>
+    let u = mkCell1 (coordAxis 0 p)
+        v = mkCell1 (coordAxis 1 p)
+        accV = setBoxTree v (lookupBoxTree v acc + w) acc
+        accU = setBoxTree u (lookupBoxTree u accV - w) accV
+    in accU
+  ) BoxLeaf edges
+
+||| DEPRECATED: Use boundaryCell1To0.
+public export
+boundaryMaxelToVexel : Maxel -> Vexel
+boundaryMaxelToVexel = boundaryCell1To0
 
 ||| Pure Multiset Boundary operator ∂₂ : List Pixel -> Multiset BoxInt Pixel
 ||| mapping a 2-cell (closed edge loop) to its edge multiset boundary (1-cells).
@@ -49,30 +57,31 @@ multisetBoundary2To1 : List (CoordCell 2) -> Multiset BoxInt (CoordCell 2)
 multisetBoundary2To1 [] = ZeroM
 multisetBoundary2To1 (p :: rest) = insertItemBox p (intToBoxInt 1) (multisetBoundary2To1 rest)
 
-||| Canonical Plaquette to Maxel boundary operator ∂₂ : List Pixel -> Maxel.
-public export
-boundaryPlaquetteToMaxel : List (CoordCell 2) -> Maxel
-boundaryPlaquetteToMaxel loopEdges = multisetToMaxel (multisetBoundary2To1 loopEdges)
-
 ||| Universal 2-cell to 1-cell boundary operator on CellMultiset carriers.
+||| Constructs an edge 1-cycle from a closed oriented loop of 1-cells (edges).
 public export
 boundaryCell2To1 : List (CoordCell 2) -> CellMultiset 2
-boundaryCell2To1 = boundaryPlaquetteToMaxel
+boundaryCell2To1 loopEdges = mkCellMultiset (map (\p => (p, intToBoxInt 1)) loopEdges)
+
+||| DEPRECATED: Use boundaryCell2To1.
+public export
+boundaryPlaquetteToMaxel : List (CoordCell 2) -> Maxel
+boundaryPlaquetteToMaxel = boundaryCell2To1
 
 ||| Pure Multiset Second Boundary Operator ∂² mapping a 2-cell closed loop down to 0-cells.
 public export
 multisetBoundaryChain2To0 : List (CoordCell 2) -> Multiset BoxInt (CoordCell 1)
 multisetBoundaryChain2To0 loopEdges = multisetBoundary1To0 (multisetBoundary2To1 loopEdges)
 
-||| Canonical Plaquette to Vexel second boundary operator ∂² : List Pixel -> Vexel.
-public export
-boundaryPlaquetteToVexel : List (CoordCell 2) -> Vexel
-boundaryPlaquetteToVexel loopEdges = multisetToVexel (multisetBoundaryChain2To0 loopEdges)
-
 ||| Universal 2-cell to 0-cell second boundary operator on CellMultiset carriers (∂² = 0).
 public export
 boundaryCell2To0 : List (CoordCell 2) -> CellMultiset 1
-boundaryCell2To0 = boundaryPlaquetteToVexel
+boundaryCell2To0 loopEdges = boundaryCell1To0 (boundaryCell2To1 loopEdges)
+
+||| DEPRECATED: Use boundaryCell2To0.
+public export
+boundaryPlaquetteToVexel : List (CoordCell 2) -> Vexel
+boundaryPlaquetteToVexel = boundaryCell2To0
 
 --------------------------------------------------------------------------------
 -- 2. DISCRETE EXTERIOR CALCULUS (DEC) COBOUNDARY OPERATORS (d₀, d₁)
