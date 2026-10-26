@@ -97,7 +97,7 @@ makeSymmetricMetric dim weights =
             acc2 = if i /= j then setBoxTree (mkPixel j i) w acc1 else acc1
         in acc2
       tree = foldl step BoxLeaf weights
-  in MkSymmetricMetricTensor (MkBoxSquareMaxel tree)
+  in MkSymmetricMetricTensor (MkSquareMaxel tree)
 
 ||| Constructs a SymmetricMetricTensor 10 from 55 independent component weights.
 public export
@@ -107,7 +107,7 @@ makeSymmetricMetric10 = makeSymmetricMetric 10
 ||| Flat Minkowski / Euclidean identity metric tensor of dimension `dim`.
 public export
 identityMetricTensor : (dim : Nat) -> SymmetricMetricTensor dim
-identityMetricTensor dim = MkSymmetricMetricTensor (identityBoxSquareMaxel dim)
+identityMetricTensor dim = MkSymmetricMetricTensor (identitySquareMaxel dim)
 
 ||| 2LTT Staged Flat Identity Metric Tensor:
 public export
@@ -135,10 +135,10 @@ contractMetric2D v w g00 g11 =
 ||| Perturbs the (0, 0) timelike metric entry with energy-momentum curvature back-reaction.
 public export
 perturbMetric00 : {dim : Nat} -> SymmetricMetricTensor dim -> BoxInt -> SymmetricMetricTensor dim
-perturbMetric00 (MkSymmetricMetricTensor (MkBoxSquareMaxel tree)) defect =
+perturbMetric00 (MkSymmetricMetricTensor (MkSquareMaxel tree)) defect =
   let cur = lookupBoxTree (mkPixel 0 0) tree
       newTree = setBoxTree (mkPixel 0 0) (cur + defect) tree
-  in MkSymmetricMetricTensor (MkBoxSquareMaxel newTree)
+  in MkSymmetricMetricTensor (MkSquareMaxel newTree)
 
 ------------------------------------------------------------------------
 -- 4. 10D CANONICAL TERM INSTANTIATION & GOH SPECTRUM
