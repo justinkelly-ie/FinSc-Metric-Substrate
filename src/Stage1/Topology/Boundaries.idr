@@ -5,9 +5,6 @@ import public Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
 import Stage0.StructuralFuel
 import public Stage1.Basis.Coordinate
-import public Stage1.Carrier.Vexel
-import public Stage1.Carrier.Maxel
-import public Stage1.Carrier.Boxel
 import Data.List
 import Data.Vect
 import Language.Reflection

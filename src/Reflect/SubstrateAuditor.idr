@@ -6,6 +6,7 @@ import Stage0.OnSeq.FusedStream
 import Stage1.Order.Preorder
 import Stage1.FourGeometries
 import Stage1.MetricSignature
+import Stage1.Carrier.CellMultiset
 import Stage1.Carrier.Maxel
 import Stage1.Goh.Factor
 import Language.Reflection

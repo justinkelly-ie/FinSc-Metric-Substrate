@@ -411,32 +411,31 @@ gohFactorPolySupportSize 3 = 3
 gohFactorPolySupportSize 5 = 5
 gohFactorPolySupportSize _ = 0
 
-||| Generates the subdiagonal shift entries for micro-matrix representation.
+||| Generates the subdiagonal shift entries directly in multiset tree space.
 public export
-makeSubDiagList : (count : Nat) -> (idx : Nat) -> List (Pixel, BoxInt)
-makeSubDiagList Z _ = []
-makeSubDiagList (S n) idx = (mkPixel (idx + 1) idx, intToBoxInt 1) :: makeSubDiagList n (S idx)
+makeSubDiagTree : (count : Nat) -> (idx : Nat) -> Maxel -> Maxel
+makeSubDiagTree Z _ acc = acc
+makeSubDiagTree (S n) idx acc =
+  makeSubDiagTree n (S idx) (singletonCell (mkPixel (idx + 1) idx) (intToBoxInt 1) <+> acc)
 
-||| Generates the column feedback entries for micro-matrix representation.
+||| Generates the column feedback entries directly in multiset tree space.
 public export
-makeColEntriesList : (dim : Nat) -> (idx : Nat) -> Vect k BoxInt -> List (Pixel, BoxInt)
-makeColEntriesList _ _ [] = []
-makeColEntriesList dim idx (c :: cs) =
-  if boxIsNonZero c
-     then (mkPixel idx dim, c) :: makeColEntriesList dim (S idx) cs
-     else makeColEntriesList dim (S idx) cs
+makeColEntriesTree : (dim : Nat) -> (idx : Nat) -> Vect k BoxInt -> Maxel -> Maxel
+makeColEntriesTree _ _ [] acc = acc
+makeColEntriesTree dim idx (c :: cs) acc =
+  let next = if boxIsNonZero c then singletonCell (mkPixel idx dim) c <+> acc else acc
+  in makeColEntriesTree dim (S idx) cs next
 
 ||| Constructs an N-dimensional companion Maxel matrix from feedback coefficients.
 public export
 companionMaxelFromFeedback : (dim : Nat) -> Vect dim BoxInt -> Maxel
-companionMaxelFromFeedback Z [] = MkMaxel []
+companionMaxelFromFeedback Z [] = neutral
 companionMaxelFromFeedback 1 [c0] =
-  if boxIsZero c0 then MkMaxel [] else MkMaxel [(mkPixel 1 1, c0)]
+  if boxIsZero c0 then neutral else singletonCell (mkPixel 1 1) c0
 companionMaxelFromFeedback (S (S k)) coeffs =
   let dim = S (S k)
-      subDiag = makeSubDiagList (S k) 1
-      colEntries = makeColEntriesList dim 1 coeffs
-  in MkMaxel (subDiag ++ colEntries)
+      subDiag = makeSubDiagTree (S k) 1 neutral
+  in makeColEntriesTree dim 1 coeffs subDiag
 
 ||| Constructs the canonical 2D companion Maxel directly from an irreducible GohFactor.
 public export
