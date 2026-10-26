@@ -35,17 +35,10 @@ public export
 streamVexel : Vexel -> FS.FusedStream (Unixel, BoxInt)
 streamVexel = streamCellMultiset
 
-||| Deforested FusedStream view of an AVL MultisetTree-backed SparseVexel vector.
-public export
-streamSparseVexel : SparseVexel -> FS.FusedStream (Unixel, BoxInt)
-streamSparseVexel (MkSparseVexel t) =
-  FS.mapStream (\pair => let (u, cnt) = pair in (u, natToBoxInt cnt)) (MT.streamMultisetTreeDirect t)
-
-||| Deforested FusedStream view of an AVL MultisetTree-backed SquareMaxel matrix.
+||| Deforested FusedStream view of an AVL BoxMultisetTree-backed SquareMaxel matrix.
 public export
 streamSquareMaxel : SquareMaxel dim -> FS.FusedStream (Pixel, BoxInt)
-streamSquareMaxel (MkSquareMaxel t) =
-  FS.mapStream (\pair => let (p, cnt) = pair in (p, natToBoxInt cnt)) (MT.streamMultisetTreeDirect t)
+streamSquareMaxel (MkSquareMaxel t) = streamCellMultiset t
 
 ||| Deforested FusedStream view of a Maxel matrix in O(1) auxiliary registers.
 public export
@@ -57,29 +50,6 @@ public export
 streamBoxel : Boxel -> FS.FusedStream (Voxel, BoxInt)
 streamBoxel = streamCellMultiset
 
-
-||| Folds a FusedStream directly into an AVL MultisetTree-backed SparseVexel under BoxNat fuel bounds,
-||| with zero intermediate List allocations.
-public export
-streamToSparseVexelBoxNat : BoxNat -> FS.FusedStream (Unixel, BoxInt) -> SparseVexel
-streamToSparseVexelBoxNat fuel strm =
-  let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
-            let (u, w) = pair
-            in if boxIsZero w then tree
-               else MT.insertTokenTree u (boxToNat w) tree
-          ) MT.Leaf strm
-  in MkSparseVexel t
-
-||| Folds a FusedStream directly into an AVL MultisetTree-backed SquareMaxel under BoxNat fuel bounds.
-public export
-streamToSquareMaxelBoxNat : {dim : Nat} -> BoxNat -> FS.FusedStream (Pixel, BoxInt) -> SquareMaxel dim
-streamToSquareMaxelBoxNat fuel strm =
-  let t = FS.foldStreamNat (boxNatToNat fuel) (\tree, pair =>
-            let (p, w) = pair
-            in if boxIsZero w then tree
-               else MT.insertTokenTree p (boxToNat w) tree
-          ) MT.Leaf strm
-  in MkSquareMaxel t
 
 ||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed CellMultiset under BoxNat fuel bounds,
 ||| with zero intermediate List allocations.
@@ -94,6 +64,12 @@ streamToCellMultisetBoxNat fuel strm =
               then MT.setBoxTree c (intToBoxInt 0) tree
               else MT.setBoxTree c newW tree
   ) MT.BoxLeaf strm
+
+||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed SquareMaxel under BoxNat fuel bounds.
+public export
+streamToSquareMaxelBoxNat : {dim : Nat} -> BoxNat -> FS.FusedStream (Pixel, BoxInt) -> SquareMaxel dim
+streamToSquareMaxelBoxNat fuel strm =
+  MkSquareMaxel (streamToCellMultisetBoxNat fuel strm)
 
 ||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed Vexel under BoxNat fuel bounds.
 public export
@@ -150,41 +126,20 @@ scaleVexelStream : BoxInt -> FS.FusedStream (Unixel, BoxInt) -> FS.FusedStream (
 scaleVexelStream s =
   FS.mapStream (\(u, w) => (u, s * w))
 
-||| Streams a balanced MaxelTree directly into a FusedStream in O(log N) stack frames.
-public export
-streamMaxelTreeDirect : MaxelTree -> FS.FusedStream (Pixel, BoxInt)
-streamMaxelTreeDirect tree =
-  FS.mapStream (\(p, cnt) => (p, natToBoxInt cnt)) (MT.streamMultisetTreeDirect tree)
-
-||| Deforested discrete matrix multiplication stream transformer:
-||| Multiplies a left Pixel stream by a right Pixel stream without intermediate list materialization.
-public export
-mulMaxelStream : FS.FusedStream (Pixel, BoxInt) -> FS.FusedStream (Pixel, BoxInt) -> FS.FusedStream (Pixel, BoxInt)
-mulMaxelStream leftStream rightStream =
-  FS.flatMapStream (\(p1, w1) =>
-    FS.filterMapStream (\(p2, w2) =>
-      case mulPixel p1 p2 of
-        Just pOut => Just (pOut, w1 * w2)
-        Nothing   => Nothing) rightStream) leftStream
-------------------------------------------------------------------------
--- UNIFIED SPARSE CARRIER INTERFACE (PHASE 3)
--- Bridges AVL MultisetTree storage and FusedStream pipelines uniformly.
-------------------------------------------------------------------------
-
 ||| Common interface for geometric sparse multiset carriers backed by AVL trees.
 public export
 interface SparseCarrier c coord | c where
-  toTree : c -> MT.MultisetTree coord
-  fromTree : MT.MultisetTree coord -> c
+  toTree : c -> BoxMultisetTree coord
+  fromTree : BoxMultisetTree coord -> c
   toStream : c -> FS.FusedStream (coord, BoxInt)
   fromStream : BoxNat -> FS.FusedStream (coord, BoxInt) -> c
 
 public export
-SparseCarrier SparseVexel Unixel where
-  toTree (MkSparseVexel t) = t
-  fromTree t = MkSparseVexel t
-  toStream = streamSparseVexel
-  fromStream = streamToSparseVexelBoxNat
+SparseCarrier Vexel Unixel where
+  toTree t = t
+  fromTree t = t
+  toStream = streamVexel
+  fromStream = streamToVexelBoxNat
 
 public export
 {dim : Nat} -> SparseCarrier (SquareMaxel dim) Pixel where
