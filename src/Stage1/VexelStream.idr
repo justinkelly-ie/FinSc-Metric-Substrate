@@ -16,19 +16,8 @@ import Stage1.DihedronModel as DM
 -- 2LTT STREAMING MULTISET VIEWS & BOXNAT CARRIERS
 ------------------------------------------------------------------------
 
-||| Universal deforested FusedStream view of any CellMultiset dim in O(1) auxiliary registers.
-public export
-streamCellMultiset : {dim : Nat} -> CellMultiset dim -> FS.FusedStream (CoordCell dim, BoxInt)
-streamCellMultiset t = MT.streamBoxMultisetTree t
-
-||| Folds a deforested FusedStream directly into a CellMultiset dim with zero intermediate List allocations.
-public export
-streamToCellMultiset : {dim : Nat} -> FS.FusedStream (CoordCell dim, BoxInt) -> CellMultiset dim
-streamToCellMultiset strm =
-  FS.foldStream (\acc, (c, w) =>
-    if boxIsZero w then acc
-    else setBoxTree c (lookupBoxTree c acc + w) acc
-  ) BoxLeaf strm
+-- Note: streamCellMultiset and streamToCellMultiset are now canonically
+-- provided upstream in Stage1.Carrier.CellMultiset (Rule 04 §11).
 
 ||| Deforested FusedStream view of a Vexel vector in O(1) auxiliary registers.
 public export
