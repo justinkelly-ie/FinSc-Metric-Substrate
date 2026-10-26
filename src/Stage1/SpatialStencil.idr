@@ -6,7 +6,6 @@ import Stage0.Multiset
 import Stage1.MultisetDuality
 import Stage1.TypeTheory.Staging
 import Stage1.Basis.Coordinate
-import Stage1.Carrier.Vexel
 import Stage1.MultisetTree
 
 %default total

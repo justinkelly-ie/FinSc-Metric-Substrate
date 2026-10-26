@@ -7,7 +7,6 @@ import Stage0.StreamPolynumber
 import Stage0.OnSeq.FusedStream as FS
 import Stage1.UnixelFraction
 import Stage1.FourGeometries
-import Stage1.Carrier.Maxel
 import Stage1.Basis.Coordinate
 import Stage1.VexelStream as VS
 import Stage1.MultisetTree

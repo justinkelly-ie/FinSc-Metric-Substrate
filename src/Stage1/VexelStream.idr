@@ -6,9 +6,6 @@ import Stage0.BoxNat
 import Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
 import Stage1.MultisetTree as MT
-import Stage1.Carrier.Vexel
-import Stage1.Carrier.Maxel
-import Stage1.Carrier.Boxel
 import Stage1.Basis.Coordinate
 import Stage1.ProjectiveRotation as PR
 import Stage1.DihedronModel as DM

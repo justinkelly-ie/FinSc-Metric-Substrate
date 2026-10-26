@@ -7,7 +7,6 @@ import Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
 import Stage1.MultisetTree as MT
 import Stage1.Basis.Coordinate
-import Stage1.Carrier.Maxel
 import Stage1.UnixelFraction as UF
 import Stage1.TypeTheory.Staging
 
