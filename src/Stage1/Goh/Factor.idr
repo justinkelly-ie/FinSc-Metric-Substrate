@@ -66,109 +66,52 @@ gohFactorDimension (MkGohFactor prf _ _ _ _) = (p ** gohPrimeWitness prf)
 -- (Cigler & Herbig, Ars Combinatoria 2026)
 ------------------------------------------------------------------------
 
-||| Factor p = 2: Dyadic Hyperbolic DE ROM bit & Toric Code Parity Syndrome (Law 36).
-||| Psi_2(x) = 4 - x, degree 1, coefficients: [4, -1].
+||| Canonical dependently typed GohFactor constructor indexed by physical prime p.
+||| Statically verifies primality at compile time via auto-implicit GohPrime witness.
 public export
-Factor2 : GohFactor 2
-Factor2 =
+gohFactor : (p : Nat) -> {auto 0 prf : GohPrime p} -> GohFactor p
+gohFactor 2 {prf = Prime2} =
   MkGohFactor
     Prime2
     [fracInt 4, fracInt (-1)]
     HyperbolicGeom
     (intToBoxInt 4)
     "Dyadic DE ROM & Toric Parity"
-
-public export
-factor2 : GohFactor 2
-factor2 = Factor2
-
-||| Factor p = 3: 3D Spatial Bound-State Canvas & Codon Triplet Reading Frame.
-||| Psi_3(x) = (x - 3)^2 = 9 - 6x + x^2, degree 2, coefficients: [9, -6, 1].
-public export
-Factor3 : GohFactor 3
-Factor3 =
+gohFactor 3 {prf = Prime3} =
   MkGohFactor
     Prime3
     [fracInt 9, fracInt (-6), fracInt 1]
     EllipticGeom
     (intToBoxInt 9)
     "3D Manifest Spatial Grid & Triplet"
-
-public export
-factor3 : GohFactor 3
-factor3 = Factor3
-
-||| Factor p = 5: Parabolic Blue Spread Hypotenuse & Pentose Nucleic Ring.
-||| Psi_5(x) = (5 - 5x + x^2)^2 = 25 - 50x + 35x^2 - 10x^3 + x^4, degree 4.
-public export
-Factor5 : GohFactor 5
-Factor5 =
+gohFactor 5 {prf = Prime5} =
   MkGohFactor
     Prime5
     [fracInt 25, fracInt (-50), fracInt 35, fracInt (-10), fracInt 1]
     ParabolicGeom
     (intToBoxInt 25)
     "Blue Spread Hypotenuse & Pentose"
-
-public export
-factor5 : GohFactor 5
-factor5 = Factor5
-
-||| Factor p = 7: Substrate Causal Arrow & Primorial 210 Ground State Budget.
-||| Degree 6 cyclotomic polynomial over the Clifford generator dimension D = 7.
-public export
-Factor7 : GohFactor 7
-Factor7 =
+gohFactor 7 {prf = Prime7} =
   MkGohFactor
     Prime7
     [fracInt 49, fracInt (-98), fracInt 70, fracInt (-28), fracInt 7, fracInt (-1), fracInt 1]
     SubstrateGeom
     (intToBoxInt 49)
     "Substrate Causal Arrow & Primorial 210"
-
-public export
-factor7 : GohFactor 7
-factor7 = Factor7
-
-||| Factor p = 11: Phase Space Boundary & Dark Matter Triangular Residue (T_10 = 55).
-public export
-Factor11 : GohFactor 11
-Factor11 =
+gohFactor 11 {prf = Prime11} =
   MkGohFactor
     Prime11
     (replicate 11 (fracInt 1))
     ParabolicGeom
     (intToBoxInt 55)
     "Phase Space Boundary & DM T_10 Residue"
-
-public export
-factor11 : GohFactor 11
-factor11 = Factor11
-
-||| Factor p = 13: 13-Smooth Gate-Purity Boundary & Observer Epoch (n = 39 = 3 * 13).
-public export
-Factor13 : GohFactor 13
-Factor13 =
+gohFactor 13 {prf = Prime13} =
   MkGohFactor
     Prime13
     (replicate 13 (fracInt 1))
     EllipticGeom
     (intToBoxInt 39)
     "13-Smooth Gate-Purity & Observer Epoch"
-
-public export
-factor13 : GohFactor 13
-factor13 = Factor13
-
-||| Canonical association mapping each GohPrime to its corresponding constructivist GohFactor.
-public export
-gohFactorForPrime : (p : Nat) -> GohPrime p -> GohFactor p
-gohFactorForPrime 2 Prime2   = Factor2
-gohFactorForPrime 3 Prime3   = Factor3
-gohFactorForPrime 5 Prime5   = Factor5
-gohFactorForPrime 7 Prime7   = Factor7
-gohFactorForPrime 11 Prime11 = Factor11
-gohFactorForPrime 13 Prime13 = Factor13
 
 ||| Canonical association mapping each fundamental geometry to its primary constructivist Goh factor (Rule 03, Item 1 & 7):
 ||| - Elliptic: Manifest Spatial Dimension L = 3 (Factor 3, Blue)
@@ -177,10 +120,10 @@ gohFactorForPrime 13 Prime13 = Factor13
 ||| - Substrate: Primorial Causal Arrow p = 7 (Factor 7, Master)
 public export
 geometryPrimaryFactor : FundamentalGeometry -> (p : Nat ** GohFactor p)
-geometryPrimaryFactor EllipticGeom   = (3 ** Factor3)
-geometryPrimaryFactor HyperbolicGeom = (2 ** Factor2)
-geometryPrimaryFactor ParabolicGeom  = (5 ** Factor5)
-geometryPrimaryFactor SubstrateGeom  = (7 ** Factor7)
+geometryPrimaryFactor EllipticGeom   = (3 ** gohFactor 3)
+geometryPrimaryFactor HyperbolicGeom = (2 ** gohFactor 2)
+geometryPrimaryFactor ParabolicGeom  = (5 ** gohFactor 5)
+geometryPrimaryFactor SubstrateGeom  = (7 ** gohFactor 7)
 
 ------------------------------------------------------------------------
 -- 3B. CONSTRUCTIVE COMPOSITE GOH COUPLINGS (35, 55, 39)
@@ -202,7 +145,7 @@ record GohCompositeCoupling (p : Nat) (q : Nat) (prod : Nat) where
 public export
 coupling35ParabolicSubstrate : GohCompositeCoupling 5 7 35
 coupling35ParabolicSubstrate =
-  MkGohCompositeCoupling Factor5 Factor7 gohPrimeProduct5_7 "Parabolic-Substrate Ground Coupling"
+  MkGohCompositeCoupling (gohFactor 5) (gohFactor 7) gohPrimeProduct5_7 "Parabolic-Substrate Ground Coupling"
 
 ||| Composite Coupling 55 (Parabolic Dark Matter Capacity & Triangular Residue):
 ||| p = 5 (Parabolic) * q = 11 (Residue Boundary) = 55.
@@ -210,7 +153,7 @@ coupling35ParabolicSubstrate =
 public export
 coupling55ParabolicDarkMatter : GohCompositeCoupling 5 11 55
 coupling55ParabolicDarkMatter =
-  MkGohCompositeCoupling Factor5 Factor11 gohPrimeProduct5_11 "Parabolic Dark Matter Capacity (T_10)"
+  MkGohCompositeCoupling (gohFactor 5) (gohFactor 11) gohPrimeProduct5_11 "Parabolic Dark Matter Capacity (T_10)"
 
 ||| Composite Coupling 39 (Observer Epoch Dual-Branch Emergence):
 ||| p = 3 (Manifest 3D Grid) * q = 13 (Cosmic Smooth Horizon) = 39.
@@ -218,7 +161,7 @@ coupling55ParabolicDarkMatter =
 public export
 coupling39ObserverEpoch : GohCompositeCoupling 3 13 39
 coupling39ObserverEpoch =
-  MkGohCompositeCoupling Factor3 Factor13 gohPrimeProduct3_13 "Observer Epoch Dual-Branch Emergence"
+  MkGohCompositeCoupling (gohFactor 3) (gohFactor 13) gohPrimeProduct3_13 "Observer Epoch Dual-Branch Emergence"
 
 ||| Invariant witness: Parabolic-Substrate coupling 35 with (2 * 3 = 6) saturates the Primorial 210 ground state.
 public export
@@ -269,13 +212,13 @@ prfFactor3RootAt3 = Refl
 ||| Invariant witness: Factor 2 and 3 vacuum quadrance sum matches Factor 5 vacuum root:
 ||| Q(2) + Q(3) = 4 + 9 = 13 (13-smooth prime).
 public export
-0 prfVacuumQuadranceSumIs13 : addBox (vacuumQuadrance Factor2) (vacuumQuadrance Factor3) = intToBoxInt 13
+0 prfVacuumQuadranceSumIs13 : addBox (vacuumQuadrance (gohFactor 2)) (vacuumQuadrance (gohFactor 3)) = intToBoxInt 13
 prfVacuumQuadranceSumIs13 = Refl
 
 ||| Invariant witness: Dyadic Factor 2 vacuum quadrance Q(2) = 4 embodies the 2 + 2 factorisation:
 ||| Q(2) = 2^2 = 2 + 2 = 4.
 public export
-0 prfFactor2QuadranceIs4 : vacuumQuadrance Factor2 = intToBoxInt 4
+0 prfFactor2QuadranceIs4 : vacuumQuadrance (gohFactor 2) = intToBoxInt 4
 prfFactor2QuadranceIs4 = Refl
 
 ------------------------------------------------------------------------
@@ -460,31 +403,31 @@ gohFactorToCompanionSquareMaxel {p} f =
 
 ||| Formal compile-time witness: Factor 2 companion support tree has 1 active pixel ([1, 1]).
 public export
-0 prfFactor2TreeSupportSize : treeElementCount (gohFactorSupportTree Factor2) = 1
+0 prfFactor2TreeSupportSize : treeElementCount (gohFactorSupportTree (gohFactor 2)) = 1
 prfFactor2TreeSupportSize = Refl
 
 ||| Formal compile-time witness: Factor 3 companion support tree has 3 active pixels ([2, 1], [1, 2], [2, 2]).
 public export
-0 prfFactor3TreeSupportSize : treeElementCount (gohFactorSupportTree Factor3) = 3
+0 prfFactor3TreeSupportSize : treeElementCount (gohFactorSupportTree (gohFactor 3)) = 3
 prfFactor3TreeSupportSize = Refl
 
 ||| Formal compile-time witness: Factor 5 companion support tree has 7 active pixels (3 subdiagonal + 4 feedback).
 public export
-0 prfFactor5TreeSupportSize : treeElementCount (gohFactorSupportTree Factor5) = 7
+0 prfFactor5TreeSupportSize : treeElementCount (gohFactorSupportTree (gohFactor 5)) = 7
 prfFactor5TreeSupportSize = Refl
 
 ||| Formal compile-time witness: Factor 2 1D polynomial support tree has 2 terms (degrees 0, 1).
 public export
-0 prfFactor2PolySupportSize : treeElementCount (gohFactorPolySupportTree Factor2) = 2
+0 prfFactor2PolySupportSize : treeElementCount (gohFactorPolySupportTree (gohFactor 2)) = 2
 prfFactor2PolySupportSize = Refl
 
 ||| Formal compile-time witness: Factor 3 1D polynomial support tree has 3 terms (degrees 0, 1, 2).
 public export
-0 prfFactor3PolySupportSize : treeElementCount (gohFactorPolySupportTree Factor3) = 3
+0 prfFactor3PolySupportSize : treeElementCount (gohFactorPolySupportTree (gohFactor 3)) = 3
 prfFactor3PolySupportSize = Refl
 
 ||| Formal compile-time witness: Factor 5 1D polynomial support tree has 5 terms (degrees 0, 1, 2, 3, 4).
 public export
-0 prfFactor5PolySupportSize : treeElementCount (gohFactorPolySupportTree Factor5) = 5
+0 prfFactor5PolySupportSize : treeElementCount (gohFactorPolySupportTree (gohFactor 5)) = 5
 prfFactor5PolySupportSize = Refl
 
