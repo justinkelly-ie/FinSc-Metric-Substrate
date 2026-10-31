@@ -67,51 +67,78 @@ gohFactorDimension (MkGohFactor prf _ _ _ _) = (p ** gohPrimeWitness prf)
 ------------------------------------------------------------------------
 
 ||| Canonical dependently typed GohFactor constructor indexed by physical prime p.
-||| Statically verifies primality at compile time via auto-implicit GohPrime witness.
+||| Canonical static Constant Applicative Forms (CAFs) allocated once at program initialization (Rule 04 §8).
 public export
-gohFactor : (p : Nat) -> {auto 0 prf : GohPrime p} -> GohFactor p
-gohFactor 2 {prf = Prime2} =
+rawFactor2 : GohFactor 2
+rawFactor2 =
   MkGohFactor
     Prime2
     [fracInt 4, fracInt (-1)]
     HyperbolicGeom
     (intToBoxInt 4)
     "Dyadic DE ROM & Toric Parity"
-gohFactor 3 {prf = Prime3} =
+
+public export
+rawFactor3 : GohFactor 3
+rawFactor3 =
   MkGohFactor
     Prime3
     [fracInt 9, fracInt (-6), fracInt 1]
     EllipticGeom
     (intToBoxInt 9)
     "3D Manifest Spatial Grid & Triplet"
-gohFactor 5 {prf = Prime5} =
+
+public export
+rawFactor5 : GohFactor 5
+rawFactor5 =
   MkGohFactor
     Prime5
     [fracInt 25, fracInt (-50), fracInt 35, fracInt (-10), fracInt 1]
     ParabolicGeom
     (intToBoxInt 25)
     "Blue Spread Hypotenuse & Pentose"
-gohFactor 7 {prf = Prime7} =
+
+public export
+rawFactor7 : GohFactor 7
+rawFactor7 =
   MkGohFactor
     Prime7
     [fracInt 49, fracInt (-98), fracInt 70, fracInt (-28), fracInt 7, fracInt (-1), fracInt 1]
     SubstrateGeom
     (intToBoxInt 49)
     "Substrate Causal Arrow & Primorial 210"
-gohFactor 11 {prf = Prime11} =
+
+public export
+rawFactor11 : GohFactor 11
+rawFactor11 =
   MkGohFactor
     Prime11
     (replicate 11 (fracInt 1))
     ParabolicGeom
     (intToBoxInt 55)
     "Phase Space Boundary & DM T_10 Residue"
-gohFactor 13 {prf = Prime13} =
+
+public export
+rawFactor13 : GohFactor 13
+rawFactor13 =
   MkGohFactor
     Prime13
     (replicate 13 (fracInt 1))
     EllipticGeom
     (intToBoxInt 39)
     "13-Smooth Gate-Purity & Observer Epoch"
+
+||| Canonical dependently typed GohFactor constructor indexed by physical prime p.
+||| Statically verifies primality at compile time via auto-implicit GohPrime witness.
+||| Projects pre-allocated static CAFs with zero runtime heap allocation (Rule 04 §8).
+public export
+gohFactor : (p : Nat) -> {auto 0 prf : GohPrime p} -> GohFactor p
+gohFactor 2 {prf = Prime2} = rawFactor2
+gohFactor 3 {prf = Prime3} = rawFactor3
+gohFactor 5 {prf = Prime5} = rawFactor5
+gohFactor 7 {prf = Prime7} = rawFactor7
+gohFactor 11 {prf = Prime11} = rawFactor11
+gohFactor 13 {prf = Prime13} = rawFactor13
 
 ||| Canonical association mapping each fundamental geometry to its primary constructivist Goh factor (Rule 03, Item 1 & 7):
 ||| - Elliptic: Manifest Spatial Dimension L = 3 (Factor 3, Blue)
@@ -283,12 +310,21 @@ factor5PolySupportTree =
          2 1
          (Node 2 (Node 1 Leaf 3 1 Leaf) 4 1 Leaf)
 
+||| Canonical static AVL MultisetTree of active 1D degrees for Factor 7 (degrees 0, 1, 2, 3, 4, 5, 6).
+public export
+factor7PolySupportTree : MultisetTree Nat
+factor7PolySupportTree =
+  Node 3 (Node 2 (Node 1 Leaf 0 1 Leaf) 1 1 (Node 1 Leaf 2 1 Leaf))
+         3 1
+         (Node 2 (Node 1 Leaf 4 1 Leaf) 5 1 (Node 1 Leaf 6 1 Leaf))
+
 ||| O(log N) AVL MultisetTree of active 1D degrees for an irreducible GohFactor.
 public export
 gohFactorPolySupportTree : {p : Nat} -> GohFactor p -> MultisetTree Nat
 gohFactorPolySupportTree {p = 2} _ = factor2PolySupportTree
 gohFactorPolySupportTree {p = 3} _ = factor3PolySupportTree
 gohFactorPolySupportTree {p = 5} _ = factor5PolySupportTree
+gohFactorPolySupportTree {p = 7} _ = factor7PolySupportTree
 gohFactorPolySupportTree _ = Leaf
 
 ||| Deforested stream of active 1D degrees unfolded from the MultisetTree in O(log N) stack frames.
@@ -322,12 +358,26 @@ factor5SupportTree =
                         (Node 1 Leaf (mkPixel 4 4) 1 Leaf)
   in Node 3 leftSub (mkPixel 3 2) 1 rightSub
 
+||| Canonical static AVL MultisetTree of active 2D coordinate support pixels for Factor 7 (dim 6).
+||| Contains 5 subdiagonal entries and 6 column feedback entries (total 11 active pixels).
+public export
+factor7SupportTree : MultisetTree Pixel
+factor7SupportTree =
+  let leftL  = Node 2 (Node 1 Leaf (mkPixel 1 6) 1 Leaf) (mkPixel 2 1) 1 Leaf
+      leftR  = Node 2 (Node 1 Leaf (mkPixel 3 2) 1 Leaf) (mkPixel 3 6) 1 Leaf
+      left   = Node 3 leftL (mkPixel 2 6) 1 leftR
+      rightL = Node 2 (Node 1 Leaf (mkPixel 4 6) 1 Leaf) (mkPixel 5 4) 1 Leaf
+      rightR = Node 2 (Node 1 Leaf (mkPixel 6 5) 1 Leaf) (mkPixel 6 6) 1 Leaf
+      right  = Node 3 rightL (mkPixel 5 6) 1 rightR
+  in Node 4 left (mkPixel 4 3) 1 right
+
 ||| O(log N) AVL MultisetTree representation of the active 2D coordinate support for a GohFactor.
 public export
 gohFactorSupportTree : {p : Nat} -> GohFactor p -> MultisetTree Pixel
 gohFactorSupportTree {p = 2} _ = factor2SupportTree
 gohFactorSupportTree {p = 3} _ = factor3SupportTree
 gohFactorSupportTree {p = 5} _ = factor5SupportTree
+gohFactorSupportTree {p = 7} _ = factor7SupportTree
 gohFactorSupportTree _ = Leaf
 
 ||| Streams the active 2D coordinate support pixels of an irreducible GohFactor in O(1) registers
@@ -343,6 +393,7 @@ gohFactorSupportSize : (p : Nat) -> Nat
 gohFactorSupportSize 2 = 1
 gohFactorSupportSize 3 = 3
 gohFactorSupportSize 5 = 7
+gohFactorSupportSize 7 = 11
 gohFactorSupportSize _ = 0
 
 ||| Discrete 1D polynomial term support cardinality for a Goh prime.
@@ -351,7 +402,39 @@ gohFactorPolySupportSize : (p : Nat) -> Nat
 gohFactorPolySupportSize 2 = 2
 gohFactorPolySupportSize 3 = 3
 gohFactorPolySupportSize 5 = 5
+gohFactorPolySupportSize 7 = 7
 gohFactorPolySupportSize _ = 0
+
+------------------------------------------------------------------------
+-- 5B. FACTOR ADDITION & COMPOSITE DIRECT SUM ALGEBRA (RULE 03 & 04)
+------------------------------------------------------------------------
+
+||| Shifts coordinate pixels by an offset (d, d) along the diagonal for block-diagonal direct sum:
+public export
+shiftPixelByDim : Nat -> Pixel -> Pixel
+shiftPixelByDim offset px =
+  mkPixel (pixelRow px + offset) (pixelCol px + offset)
+
+||| Shifts an entire MultisetTree of pixels by a diagonal dimension offset:
+public export
+shiftSupportTree : (dimOffset : Nat) -> MultisetTree Pixel -> MultisetTree Pixel
+shiftSupportTree Z tree = tree
+shiftSupportTree offset Leaf = Leaf
+shiftSupportTree offset (Node h l x c r) =
+  Node h (shiftSupportTree offset l) (shiftPixelByDim offset x) c (shiftSupportTree offset r)
+
+||| Orthogonal direct sum of two GohFactor companion support trees (dim = d1 + d2):
+||| Shifts the second tree's coordinates by gohDegree p, modeling block-diagonal companion matrices.
+public export
+gohFactorDirectSumTree : {p, q : Nat} -> GohFactor p -> GohFactor q -> MultisetTree Pixel
+gohFactorDirectSumTree {p} fp fq =
+  gohFactorSupportTree fp <+> shiftSupportTree (gohDegree p) (gohFactorSupportTree fq)
+
+||| Companion support tree of a composite coupling (e.g. coupling39ObserverEpoch for 3 x 13):
+public export
+gohCompositeSupportTree : {p, q : Nat} -> GohCompositeCoupling p q prod -> MultisetTree Pixel
+gohCompositeSupportTree {p} {q} (MkGohCompositeCoupling fp fq _ _) =
+  gohFactorDirectSumTree fp fq
 
 ||| Generates the subdiagonal shift entries directly in multiset tree space.
 public export
@@ -430,4 +513,20 @@ prfFactor3PolySupportSize = Refl
 public export
 0 prfFactor5PolySupportSize : treeElementCount (gohFactorPolySupportTree (gohFactor 5)) = 5
 prfFactor5PolySupportSize = Refl
+
+||| Formal compile-time witness: Factor 7 companion support tree has 11 active pixels.
+public export
+0 prfFactor7TreeSupportSize : treeElementCount (gohFactorSupportTree (gohFactor 7)) = 11
+prfFactor7TreeSupportSize = Refl
+
+||| Formal compile-time witness: Factor 7 1D polynomial support tree has 7 terms (degrees 0..6).
+public export
+0 prfFactor7PolySupportSize : treeElementCount (gohFactorPolySupportTree (gohFactor 7)) = 7
+prfFactor7PolySupportSize = Refl
+
+||| Formal compile-time witness: Shifting Factor 2 companion support by 1 yields 1 active pixel ([2, 2]).
+public export
+0 prfShiftFactor2SupportSize :
+  treeElementCount (shiftSupportTree 1 (gohFactorSupportTree (gohFactor 2))) = 1
+prfShiftFactor2SupportSize = Refl
 
