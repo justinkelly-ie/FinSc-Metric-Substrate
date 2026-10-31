@@ -264,27 +264,27 @@ prfChromogeometricBudgetConservation = Refl
 ||| Certified manifest spatial basis dimension L = 3 (Sigma-pair).
 public export
 manifestSpatialDimension : CosmicDimension
-manifestSpatialDimension = dimManifest3
+manifestSpatialDimension = dimManifest
 
 ||| Certified Elliptic lattice state capacity: 3^3 = 27 (Sigma-pair).
 public export
 ellipticDimension : CosmicDimension
-ellipticDimension = dimElliptic27
+ellipticDimension = dimElliptic
 
 ||| Certified Hyperbolic ROM storage capacity: 2^7 = 128 (Sigma-pair).
 public export
 hyperbolicDimension : CosmicDimension
-hyperbolicDimension = dimHyperbolic128
+hyperbolicDimension = dimHyperbolic
 
 ||| Certified Parabolic dissipation sink residue: T_10 = 55 (Sigma-pair).
 public export
 darkMatterDimension : CosmicDimension
-darkMatterDimension = dimParabolic55
+darkMatterDimension = dimParabolic
 
 ||| Certified Primorial 210 cosmic capacity budget: 27 + 128 + 55 = 210 (Sigma-pair).
 public export
 primorialBudgetDimension : CosmicDimension
-primorialBudgetDimension = dimPrimorial210
+primorialBudgetDimension = dimPrimorial
 
 ||| Maps each of the 4 fundamental geometries to its certified CosmicDimension Sigma-pair (Rule 03, Item 1 & 7).
 public export
@@ -293,6 +293,14 @@ geometryDimension EllipticGeom   = ellipticDimension
 geometryDimension HyperbolicGeom = hyperbolicDimension
 geometryDimension ParabolicGeom  = darkMatterDimension
 geometryDimension SubstrateGeom  = primorialBudgetDimension
+
+||| Maps each of the 4 fundamental geometries to its certified EmergentCosmicDimension.
+public export
+geometryEmergentDimension : FundamentalGeometry -> EmergentCosmicDimension
+geometryEmergentDimension EllipticGeom   = dimEmergentElliptic
+geometryEmergentDimension HyperbolicGeom = dimEmergentHyperbolic
+geometryEmergentDimension ParabolicGeom  = dimEmergentParabolic
+geometryEmergentDimension SubstrateGeom  = dimEmergentPrimorial
 
 ||| Model-indexed GohFuel canonically derived from the certified dimension of the geometry (Rule 04, Item 4).
 public export
