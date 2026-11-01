@@ -436,6 +436,49 @@ gohCompositeSupportTree : {p, q : Nat} -> GohCompositeCoupling p q prod -> Multi
 gohCompositeSupportTree {p} {q} (MkGohCompositeCoupling fp fq _ _) =
   gohFactorDirectSumTree fp fq
 
+||| Resolves the support tree and cyclotomic degree for a constructivist Goh prime gate:
+public export
+gohPrimeFactor : (p : Nat) -> Maybe (deg : Nat ** MultisetTree Pixel)
+gohPrimeFactor 2  = Just (gohDegree 2 ** gohFactorSupportTree (gohFactor 2))
+gohPrimeFactor 3  = Just (gohDegree 3 ** gohFactorSupportTree (gohFactor 3))
+gohPrimeFactor 5  = Just (gohDegree 5 ** gohFactorSupportTree (gohFactor 5))
+gohPrimeFactor 7  = Just (gohDegree 7 ** gohFactorSupportTree (gohFactor 7))
+gohPrimeFactor 11 = Just (gohDegree 11 ** gohFactorSupportTree (gohFactor 11))
+gohPrimeFactor 13 = Just (gohDegree 13 ** gohFactorSupportTree (gohFactor 13))
+gohPrimeFactor _  = Nothing
+
+||| Canonical N-ary prime spectrum companion direct sum support tree:
+||| Computes the block-diagonal companion support tree for a list of prime numbers,
+||| shifting each prime factor block by the cumulative degree offset along the diagonal.
+public export
+gohPrimeSpectrumDirectSumTree : List Nat -> MultisetTree Pixel
+gohPrimeSpectrumDirectSumTree primes =
+  let (treeFinal, _) = foldl step (Leaf, 0) primes
+  in treeFinal
+  where
+    step : (MultisetTree Pixel, Nat) -> Nat -> (MultisetTree Pixel, Nat)
+    step (accTree, offset) p =
+      case gohPrimeFactor p of
+        Nothing => (accTree, offset)
+        Just (deg ** blockTree) =>
+          let shiftedBlock = shiftSupportTree offset blockTree
+          in (accTree <+> shiftedBlock, offset + deg)
+
+||| Deforested N-ary prime spectrum companion direct sum support tree streaming over FusedStream:
+public export
+gohPrimeSpectrumDirectSumStream : FusedStream Nat -> MultisetTree Pixel
+gohPrimeSpectrumDirectSumStream strm =
+  let (treeFinal, _) = foldStreamNat 256 step (Leaf, 0) strm
+  in treeFinal
+  where
+    step : (MultisetTree Pixel, Nat) -> Nat -> (MultisetTree Pixel, Nat)
+    step (accTree, offset) p =
+      case gohPrimeFactor p of
+        Nothing => (accTree, offset)
+        Just (deg ** blockTree) =>
+          let shiftedBlock = shiftSupportTree offset blockTree
+          in (accTree <+> shiftedBlock, offset + deg)
+
 ||| Generates the subdiagonal shift entries directly in multiset tree space.
 public export
 makeSubDiagTree : (count : Nat) -> (idx : Nat) -> Maxel -> Maxel
@@ -529,4 +572,19 @@ public export
 0 prfShiftFactor2SupportSize :
   treeElementCount (shiftSupportTree 1 (gohFactorSupportTree (gohFactor 2))) = 1
 prfShiftFactor2SupportSize = Refl
+
+||| Formal compile-time witness: Direct sum of prime factors [2, 3, 5] preserves active companion support size:
+||| 1 (Factor 2) + 3 (Factor 3) + 7 (Factor 5) = 11 active non-zero pixels.
+public export
+0 prfPrimeSpectrumDirectSumSupportSize :
+  treeElementCount (gohPrimeSpectrumDirectSumTree [2, 3, 5]) = 11
+prfPrimeSpectrumDirectSumSupportSize = Refl
+
+||| Static audit proof verifying prime spectrum direct sum tree support size.
+public export
+auditPrimeSpectrumDirectSumProof : Bool
+auditPrimeSpectrumDirectSumProof =
+  let t = gohPrimeSpectrumDirectSumTree [2, 3, 5]
+  in treeElementCount t == 11
+
 
