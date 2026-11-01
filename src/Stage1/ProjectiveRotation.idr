@@ -208,6 +208,44 @@ public export
                                  splice (stagedRotationMaxelScaled3 (quote p)) = rotationMaxelScaled3 p
 prfStagedRotationMaxelScaled3 _ = Refl
 
+||| 2LTT Staged Fused 3D Rotation SquareMaxel: Phi(p2 * p1)
+||| Fuses two 3D rotations via projective proportion multiplication at Level 1
+||| before generating a sparse SquareMaxel 3, avoiding runtime 3x3 matrix multiplication.
+public export
+stagedFusedRotationMaxel : Lift ProjectiveProportion -> Lift ProjectiveProportion -> Code (SquareMaxel 3)
+stagedFusedRotationMaxel qP1 qP2 =
+  stagedRotationMaxelScaled3 (stagedComposeProportion qP2 qP1)
+
+||| Staged evaluation of fused 3D rotation SquareMaxel:
+public export
+evalStagedFusedRotationMaxel : Lift ProjectiveProportion -> Lift ProjectiveProportion -> SquareMaxel 3
+evalStagedFusedRotationMaxel qP1 qP2 = splice (stagedFusedRotationMaxel qP1 qP2)
+
+||| 2LTT Staged Fused 3D Vector Rotation:
+public export
+stagedFusedRotateVector : Lift ProjectiveProportion -> Lift ProjectiveProportion -> Vect 3 BoxInt -> Code (Vect 3 BoxInt)
+stagedFusedRotateVector qP1 qP2 v =
+  stagedRotateVectorScaled (stagedComposeProportion qP2 qP1) v
+
+||| Staged evaluation of fused 3D vector rotation:
+public export
+evalStagedFusedRotateVector : Lift ProjectiveProportion -> Lift ProjectiveProportion -> Vect 3 BoxInt -> Vect 3 BoxInt
+evalStagedFusedRotateVector qP1 qP2 v = splice (stagedFusedRotateVector qP1 qP2 v)
+
+||| QTT 0 Erased Proof Witness: Fused Rotation Maxel Equivalence
+public export
+0 prfStagedFusedRotationMaxel : (p1, p2 : ProjectiveProportion) ->
+                               splice (stagedFusedRotationMaxel (quote p1) (quote p2)) =
+                                 rotationMaxelScaled3 (composeProportion p2 p1)
+prfStagedFusedRotationMaxel _ _ = Refl
+
+||| QTT 0 Erased Proof Witness: Fused Vector Rotation Equivalence
+public export
+0 prfStagedFusedRotateVector : (p1, p2 : ProjectiveProportion) -> (v : Vect 3 BoxInt) ->
+                              splice (stagedFusedRotateVector (quote p1) (quote p2) v) =
+                                rotateVectorScaled (composeProportion p2 p1) v
+prfStagedFusedRotateVector _ _ _ = Refl
+
 ------------------------------------------------------------------------
 -- 3. DEFORESTED STREAMING ROTATIONS
 ------------------------------------------------------------------------
