@@ -66,5 +66,5 @@ metricPixelToCell2 (MkPixel s t) = mkCell2 s t
 ||| Bridge from canonical CoordCell 2 to legacy MetricPixel.
 public export
 cell2ToMetricPixel : {0 m : Metric} -> CoordCell 2 -> MetricPixel m Nat
-cell2ToMetricPixel c = MkPixel (coordAxis 0 c) (coordAxis 1 c)
+cell2ToMetricPixel c = MkPixel (pixelRow c) (pixelCol c)
 

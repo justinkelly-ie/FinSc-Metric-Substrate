@@ -138,7 +138,7 @@ signatureQuadrance2D sig x y =
 public export
 signatureCellQuadrance2D : MetricSignature -> CoordCell 2 -> BoxInt
 signatureCellQuadrance2D sig c =
-  signatureQuadrance2D sig (natToBoxInt (coordAxis 0 c)) (natToBoxInt (coordAxis 1 c))
+  signatureQuadrance2D sig (natToBoxInt (pixelRow c)) (natToBoxInt (pixelCol c))
 
 ------------------------------------------------------------------------
 -- 5. TYPE-LEVEL PROOFS & WITNESSES
