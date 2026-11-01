@@ -161,6 +161,39 @@ quadStreamTotalMass : QuadStreamMultiset BoxInt -> BoxInt
 quadStreamTotalMass (MkQuadStream e h p s) =
   multisetSum e + multisetSum h + multisetSum p + multisetSum s
 
+||| Generates a QuadStreamMultiset payload directly from integer lattice coordinates (x, y)
+||| in O(1) registers, where each stream stores its respective quadrance as a multiset weight:
+||| - ellipticStream: Q_Blue = x^2 + y^2
+||| - hyperbolicStream: Q_Red = x^2 - y^2
+||| - parabolicStream: Q_Green = 2xy
+||| - substrateStream: Q_Substrate = (Q_Blue + Q_Red + 2*Q_Green) / 2 = x^2 + 2xy.
+public export
+quadStreamFromLattice : (x, y : BoxInt) -> QuadStreamMultiset BoxInt
+quadStreamFromLattice x y =
+  let qb = (x * x) + (y * y)
+      qr = (x * x) - (y * y)
+      qg = intToBoxInt 2 * (x * y)
+      qs = (x * x) + intToBoxInt 2 * (x * y)
+      eStream = AddM (intToBoxInt 1) qb ZeroM
+      hStream = AddM (intToBoxInt 1) qr ZeroM
+      pStream = AddM (intToBoxInt 1) qg ZeroM
+      sStream = AddM (intToBoxInt 1) qs ZeroM
+  in MkQuadStream eStream hStream pStream sStream
+
+||| Audits the 4-Geometry completion theorem over the lattice-generated QuadStreamMultiset:
+||| 2 * substrate == elliptic + hyperbolic + 2 * parabolic.
+public export
+auditQuadStreamLatticeCompletion : (x, y : BoxInt) -> Bool
+auditQuadStreamLatticeCompletion x y =
+  let qs = quadStreamFromLattice x y
+      qb = multisetSum qs.ellipticStream
+      qr = multisetSum qs.hyperbolicStream
+      qg = multisetSum qs.parabolicStream
+      qsub = multisetSum qs.substrateStream
+      lhs = intToBoxInt 2 * qsub
+      rhs = qb + qr + intToBoxInt 2 * qg
+  in lhs == rhs
+
 ||| Static compile-time witness verifying lens get-set identity property.
 public export
 0 verifyQuadLensGetSetIdentity : (qs : QuadStreamMultiset a) -> (ch : QuadStreamChannel) ->
