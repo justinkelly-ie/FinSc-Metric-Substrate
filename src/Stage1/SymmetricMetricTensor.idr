@@ -136,8 +136,8 @@ stagedContractMetric2D qv qw qg00 qg11 =
   quote (let v = splice qv; w = splice qw
              g0 = integerToNat (unwrapBox (splice qg00))
              g1 = integerToNat (unwrapBox (splice qg11))
-             c0 = (coordAxis 0 v * coordAxis 0 w) * g0
-             c1 = (coordAxis 1 v * coordAxis 1 w) * g1
+             c0 = (pixelRow v * pixelRow w) * g0
+             c1 = (pixelCol v * pixelCol w) * g1
          in c0 + c1)
 
 ||| Exact bilinear metric contraction over 2D coordinates.

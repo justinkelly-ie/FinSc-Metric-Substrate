@@ -25,9 +25,8 @@ public export
 multisetBoundary1To0 : Multiset BoxInt (CoordCell 2) -> Multiset BoxInt (CoordCell 1)
 multisetBoundary1To0 ZeroM = ZeroM
 multisetBoundary1To0 (AddM p w rest) =
-  let u = coordAxis 0 p
-      v = coordAxis 1 p
-  in insertItemBox (mkCell1 v) w (insertItemBox (mkCell1 u) (negBox w) (multisetBoundary1To0 rest))
+  let (u, v) = pixelSplitUnixels p
+  in insertItemBox v w (insertItemBox u (negBox w) (multisetBoundary1To0 rest))
 
 ||| Universal 1-cell to 0-cell boundary operator on CellMultiset carriers.
 ||| Maps directed edge [u -> v] with weight w to vertex boundary differences +w [v] - w [u].
@@ -35,8 +34,7 @@ public export
 boundaryCell1To0 : CellMultiset 2 -> CellMultiset 1
 boundaryCell1To0 edges =
   foldBoxTreeL (\acc, (p, w) =>
-    let u = mkCell1 (coordAxis 0 p)
-        v = mkCell1 (coordAxis 1 p)
+    let (u, v) = pixelSplitUnixels p
         accV = setBoxTree v (lookupBoxTree v acc + w) acc
         accU = setBoxTree u (lookupBoxTree u accV - w) accV
     in accU
@@ -87,10 +85,9 @@ public export
 multisetCoboundary0To1 : List (CoordCell 2) -> Multiset BoxInt (CoordCell 1) -> Multiset BoxInt (CoordCell 2)
 multisetCoboundary0To1 [] _ = ZeroM
 multisetCoboundary0To1 (p :: rest) phi =
-  let u = coordAxis 0 p
-      v = coordAxis 1 p
-      phiU = lookupCountBox (mkCell1 u) phi
-      phiV = lookupCountBox (mkCell1 v) phi
+  let (u, v) = pixelSplitUnixels p
+      phiU = lookupCountBox u phi
+      phiV = lookupCountBox v phi
       diff = subBox phiV phiU
   in case diff of
        MkBoxInt 0 => multisetCoboundary0To1 rest phi
@@ -154,10 +151,9 @@ public export
 streamCoboundary0To1 : FusedStream Pixel -> Multiset BoxInt Unixel -> FusedStream (Pixel, BoxInt)
 streamCoboundary0To1 strm phi =
   filterMapStream (\p =>
-    let u = pixelRow p
-        v = pixelCol p
-        phiU = lookupCountBox (mkUnixel u) phi
-        phiV = lookupCountBox (mkUnixel v) phi
+    let (u, v) = pixelSplitUnixels p
+        phiU = lookupCountBox u phi
+        phiV = lookupCountBox v phi
         diff = subBox phiV phiU
     in case diff of
          MkBoxInt 0 => Nothing
@@ -199,11 +195,10 @@ streamLaplacian0Fuel : Fuel -> FusedStream Pixel -> Multiset BoxInt Unixel -> Mu
 streamLaplacian0Fuel f strm phi =
   let gradStrm = streamCoboundary0To1 strm phi
   in foldStreamFuel f (\acc, (p, diff) =>
-       let u = pixelRow p
-           v = pixelCol p
+       let (u, v) = pixelSplitUnixels p
            negDiff = mulBox (intToBoxInt (-1)) diff
-           acc1 = insertItemBox (mkUnixel v) diff acc
-       in insertItemBox (mkUnixel u) negDiff acc1
+           acc1 = insertItemBox v diff acc
+       in insertItemBox u negDiff acc1
      ) ZeroM gradStrm
 
 
