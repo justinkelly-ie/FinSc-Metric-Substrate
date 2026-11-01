@@ -148,12 +148,12 @@ streamRotateVexelN3 prop =
   FS.mapStream (PR.rotateVexelN3 prop)
 
 ||| Deforested stream transformer accumulating relativistic velocities:
-||| v_total = v_n (+) ... (+) v_1 using exact Wildberger anchor product addition.
+||| v_total = v_n (+) ... (+) v_1 using exact Wildberger projective relativistic composition.
+||| Preserves exact rational denominators across multi-step velocity streams.
 public export
 streamAccumulateVelocities : FS.FusedStream (Vect 3 BoxInt) -> FS.FusedStream (Vect 3 BoxInt, BoxInt)
 streamAccumulateVelocities strm =
   FS.scanStream (\acc, u =>
-    let (v, den) = acc
-    in DM.velocityAdditionComponents v u
-  ) ([0, 0, 0], 1) strm
+    DM.velocityAdditionProjective acc (u, intToBoxInt 1)
+  ) ([0, 0, 0], intToBoxInt 1) strm
 

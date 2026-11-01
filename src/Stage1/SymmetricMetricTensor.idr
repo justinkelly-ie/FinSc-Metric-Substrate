@@ -7,6 +7,7 @@ import Stage0.PrimeMultiset
 import Stage1.TypeTheory.Staging
 import Data.Vect
 import Data.Nat
+import Stage0.OnSeq.FusedStream
 
 %default total
 
@@ -80,11 +81,11 @@ allSymmetricPairs (S k) =
 ------------------------------------------------------------------------
 
 ||| Dependently typed Symmetric Metric Tensor of dimension `dim`.
-||| Wraps a BoxSquareMaxel dim whose matrix elements satisfy g_{ij} = g_{ji}.
+||| Wraps a SquareMaxel dim whose matrix elements satisfy g_{ij} = g_{ji}.
 public export
 record SymmetricMetricTensor (dim : Nat) where
   constructor MkSymmetricMetricTensor
-  metricMaxel : BoxSquareMaxel dim
+  metricMaxel : SquareMaxel dim
 
 ||| Constructs a SymmetricMetricTensor dim from independent component weights.
 public export
@@ -97,6 +98,19 @@ makeSymmetricMetric dim weights =
             acc2 = if i /= j then setBoxTree (mkPixel j i) w acc1 else acc1
         in acc2
       tree = foldl step BoxLeaf weights
+  in MkSymmetricMetricTensor (MkSquareMaxel tree)
+
+||| Deforested stream constructor for SymmetricMetricTensor dim with zero List allocation.
+public export
+makeSymmetricMetricStream : (dim : Nat) -> FusedStream (Nat, BoxInt) -> SymmetricMetricTensor dim
+makeSymmetricMetricStream dim strm =
+  let step : BoxMultisetTree Pixel -> (Nat, BoxInt) -> BoxMultisetTree Pixel
+      step acc (k, w) =
+        let (i, j) = unpackMetricIndexDim dim k
+            acc1 = setBoxTree (mkPixel i j) w acc
+            acc2 = if i /= j then setBoxTree (mkPixel j i) w acc1 else acc1
+        in acc2
+      tree = foldStream step BoxLeaf strm
   in MkSymmetricMetricTensor (MkSquareMaxel tree)
 
 ||| Constructs a SymmetricMetricTensor 10 from 55 independent component weights.
@@ -131,6 +145,27 @@ public export
 contractMetric2D : CoordCell 2 -> CoordCell 2 -> BoxInt -> BoxInt -> Nat
 contractMetric2D v w g00 g11 =
   splice (stagedContractMetric2D (quote v) (quote w) (quote g00) (quote g11))
+
+||| General metric contraction on a typed vector VexelN dim: v' = g · v.
+public export
+contractMetric : {dim : Nat} -> SymmetricMetricTensor dim -> VexelN dim -> VexelN dim
+contractMetric g v = contractSquareMaxelDense g.metricMaxel v
+
+||| 2LTT Staged General Metric Contraction:
+public export
+stagedMetricContract : {dim : Nat} -> Lift (SymmetricMetricTensor dim) -> VexelN dim -> Code (VexelN dim)
+stagedMetricContract qg v = quote (contractMetric (splice qg) v)
+
+||| Staged evaluation of general metric contraction:
+public export
+evalStagedMetricContract : {dim : Nat} -> Lift (SymmetricMetricTensor dim) -> VexelN dim -> VexelN dim
+evalStagedMetricContract qg v = splice (stagedMetricContract qg v)
+
+||| QTT 0 Erased Proof Witness: Staged Metric Contraction Invariance
+public export
+0 prfStagedMetricContract : {dim : Nat} -> (g : SymmetricMetricTensor dim) -> (v : VexelN dim) ->
+                            splice (stagedMetricContract (quote g) v) = contractMetric g v
+prfStagedMetricContract _ _ = Refl
 
 ||| Perturbs the (0, 0) timelike metric entry with energy-momentum curvature back-reaction.
 public export

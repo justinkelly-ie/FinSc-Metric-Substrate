@@ -91,6 +91,22 @@ composeProportion p1 p2 =
       sOut = (x1 * s2) + (x2 * s1) + cz
   in MkProjectiveProportion xOut tOut rOut sOut
 
+||| 2LTT Staged Projective Proportion Composition:
+public export
+stagedComposeProportion : Lift ProjectiveProportion -> Lift ProjectiveProportion -> Code ProjectiveProportion
+stagedComposeProportion qp1 qp2 = quote (composeProportion (splice qp1) (splice qp2))
+
+||| Staged evaluation of projective proportion composition:
+public export
+evalStagedComposeProportion : Lift ProjectiveProportion -> Lift ProjectiveProportion -> ProjectiveProportion
+evalStagedComposeProportion qp1 qp2 = splice (stagedComposeProportion qp1 qp2)
+
+||| QTT 0 Erased Proof Witness: Staged Proportion Composition Invariant
+public export
+0 prfStagedComposeProportion : (p1, p2 : ProjectiveProportion) ->
+                              splice (stagedComposeProportion (quote p1) (quote p2)) = composeProportion p1 p2
+prfStagedComposeProportion _ _ = Refl
+
 ||| Inverse of a projective rotation proportion: (x : -t : -r : -s).
 public export
 inverseProportion : ProjectiveProportion -> ProjectiveProportion
@@ -143,6 +159,54 @@ public export
 rotationMaxelScaled3 : ProjectiveProportion -> SquareMaxel 3
 rotationMaxelScaled3 prop =
   maxelNToSquareMaxel (MkMaxelN (rotationMatrixScaled3 prop))
+
+||| 2LTT Staged 3D Vector Scaled Rotation:
+public export
+stagedRotateVectorScaled : Lift ProjectiveProportion -> Vect 3 BoxInt -> Code (Vect 3 BoxInt)
+stagedRotateVectorScaled qp v = quote (rotateVectorScaled (splice qp) v)
+
+||| Staged evaluation of 3D vector scaled rotation:
+public export
+evalStagedRotateVectorScaled : Lift ProjectiveProportion -> Vect 3 BoxInt -> Vect 3 BoxInt
+evalStagedRotateVectorScaled qp v = splice (stagedRotateVectorScaled qp v)
+
+||| QTT 0 Erased Proof Witness: Staged Vector Rotation Invariant
+public export
+0 prfStagedRotateVectorScaled : (p : ProjectiveProportion) -> (v : Vect 3 BoxInt) ->
+                               splice (stagedRotateVectorScaled (quote p) v) = rotateVectorScaled p v
+prfStagedRotateVectorScaled _ _ = Refl
+
+||| 2LTT Staged VexelN 3 Rotation:
+public export
+stagedRotateVexelN3 : Lift ProjectiveProportion -> VexelN 3 -> Code (VexelN 3)
+stagedRotateVexelN3 qp v = quote (rotateVexelN3 (splice qp) v)
+
+||| Staged evaluation of VexelN 3 rotation:
+public export
+evalStagedRotateVexelN3 : Lift ProjectiveProportion -> VexelN 3 -> VexelN 3
+evalStagedRotateVexelN3 qp v = splice (stagedRotateVexelN3 qp v)
+
+||| QTT 0 Erased Proof Witness: Staged VexelN 3 Rotation Invariant
+public export
+0 prfStagedRotateVexelN3 : (p : ProjectiveProportion) -> (v : VexelN 3) ->
+                          splice (stagedRotateVexelN3 (quote p) v) = rotateVexelN3 p v
+prfStagedRotateVexelN3 _ _ = Refl
+
+||| 2LTT Staged Rotation SquareMaxel 3 Generation:
+public export
+stagedRotationMaxelScaled3 : Lift ProjectiveProportion -> Code (SquareMaxel 3)
+stagedRotationMaxelScaled3 qp = quote (rotationMaxelScaled3 (splice qp))
+
+||| Staged evaluation of Rotation SquareMaxel 3:
+public export
+evalStagedRotationMaxelScaled3 : Lift ProjectiveProportion -> SquareMaxel 3
+evalStagedRotationMaxelScaled3 qp = splice (stagedRotationMaxelScaled3 qp)
+
+||| QTT 0 Erased Proof Witness: Staged Rotation SquareMaxel Generation Invariant
+public export
+0 prfStagedRotationMaxelScaled3 : (p : ProjectiveProportion) ->
+                                 splice (stagedRotationMaxelScaled3 (quote p)) = rotationMaxelScaled3 p
+prfStagedRotationMaxelScaled3 _ = Refl
 
 ------------------------------------------------------------------------
 -- 3. DEFORESTED STREAMING ROTATIONS

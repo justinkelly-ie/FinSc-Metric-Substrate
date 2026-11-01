@@ -58,12 +58,8 @@ multisetBoundary2To1 (p :: rest) = insertItemBox p (intToBoxInt 1) (multisetBoun
 ||| Constructs an edge 1-cycle from a closed oriented loop of 1-cells (edges).
 public export
 boundaryCell2To1 : List (CoordCell 2) -> CellMultiset 2
-boundaryCell2To1 loopEdges = mkCellMultiset (map (\p => (p, intToBoxInt 1)) loopEdges)
-
-||| DEPRECATED: Use boundaryCell2To1.
-public export
-boundaryPlaquetteToMaxel : List (CoordCell 2) -> Maxel
-boundaryPlaquetteToMaxel = boundaryCell2To1
+boundaryCell2To1 loopEdges =
+  streamToCellMultiset (FS.mapStream (\p => (p, intToBoxInt 1)) (FS.stream loopEdges))
 
 ||| Pure Multiset Second Boundary Operator ∂² mapping a 2-cell closed loop down to 0-cells.
 public export
