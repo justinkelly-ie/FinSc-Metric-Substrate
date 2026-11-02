@@ -143,3 +143,21 @@ auditSubstrateCellSBFProof =
   let vec = singletonCell (mkUnixel X) (intToBoxInt 1) <+> singletonCell (mkUnixel Y) (intToBoxInt 1)
   in evalCellSBF substrateCellSBF vec == intToBoxInt 3
 
+||| Canonical aliases connecting legacy SBF names to canonical CellMultiset 2 metrics:
+public export
+blueSBFCell : CellMultiset 2
+blueSBFCell = blueCellSBF
+
+public export
+redSBFCell : CellMultiset 2
+redSBFCell = redCellSBF
+
+public export
+greenSBFCell : CellMultiset 2
+greenSBFCell = greenCellSBF
+
+public export
+substrateSBFCell : CellMultiset 2
+substrateSBFCell = substrateCellSBF
+
+
