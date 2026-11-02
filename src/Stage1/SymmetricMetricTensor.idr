@@ -87,6 +87,11 @@ record SymmetricMetricTensor (dim : Nat) where
   constructor MkSymmetricMetricTensor
   metricMaxel : SquareMaxel dim
 
+public export
+{dim : Nat} -> Eq (SymmetricMetricTensor dim) where
+  (MkSymmetricMetricTensor m1) == (MkSymmetricMetricTensor m2) = m1 == m2
+
+
 ||| Constructs a SymmetricMetricTensor dim from independent component weights.
 public export
 makeSymmetricMetric : (dim : Nat) -> List (Nat, BoxInt) -> SymmetricMetricTensor dim
