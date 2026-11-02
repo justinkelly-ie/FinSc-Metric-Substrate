@@ -5,13 +5,14 @@ import Stage1.Basis.Coordinate
 %default total
 
 public export
-data Metric = Blue | Red | Green
+data Metric = Blue | Red | Green | Substrate
 
 public export
 Eq Metric where
   Blue == Blue = True
   Red == Red = True
   Green == Green = True
+  Substrate == Substrate = True
   _ == _ = False
 
 public export
@@ -19,6 +20,7 @@ Show Metric where
   show Blue = "Blue"
   show Red = "Red"
   show Green = "Green"
+  show Substrate = "Substrate"
 
 ||| The core fundamental data structure of the non-linear physics engine.
 ||| A 2-component coordinate representing a source and target (e.g. x and y).
@@ -28,7 +30,7 @@ record Pixel (metric : Metric) (a : Type) where
   src : a
   tgt : a
 
-||| Canonical unambiguous alias for chromogeometric 3-metric pixels.
+||| Canonical unambiguous alias for chromogeometric 4-metric pixels.
 public export
 MetricPixel : Metric -> Type -> Type
 MetricPixel = Pixel

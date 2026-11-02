@@ -1,6 +1,7 @@
 module Stage1.FourGeometries
 
 import Stage0.BoxInt
+import Stage0.Pixel
 import Stage0.StructuralFuel
 import Stage1.ScaleTransform
 import Stage1.TypeTheory.Smoothness
@@ -78,6 +79,22 @@ Show FundamentalGeometry where
   show HyperbolicGeom = "Hyperbolic(Red)"
   show ParabolicGeom  = "Parabolic(Green)"
   show SubstrateGeom  = "Substrate(Null)"
+
+||| Bidirectional isomorphism: Converts Stage0 Metric to Stage1 FundamentalGeometry.
+public export
+metricToGeometry : Metric -> FundamentalGeometry
+metricToGeometry Blue = EllipticGeom
+metricToGeometry Red = HyperbolicGeom
+metricToGeometry Green = ParabolicGeom
+metricToGeometry Substrate = SubstrateGeom
+
+||| Bidirectional isomorphism: Converts Stage1 FundamentalGeometry to Stage0 Metric.
+public export
+geometryToMetric : FundamentalGeometry -> Metric
+geometryToMetric EllipticGeom = Blue
+geometryToMetric HyperbolicGeom = Red
+geometryToMetric ParabolicGeom = Green
+geometryToMetric SubstrateGeom = Substrate
 
 ||| Auxiliary helper for natural power computation (b^e).
 public export

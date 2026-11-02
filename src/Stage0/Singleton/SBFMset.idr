@@ -57,6 +57,12 @@ public export
 greenSBF : Multiset BoxInt (Pixel Green Coord2D)
 greenSBF = AddM (MkPixel X Y) 1 (AddM (MkPixel Y X) 1 ZeroM)
 
+-- Row 10: Master Substrate Form [ ((X, X), 1), ((X, Y), 1), ((Y, X), 1) ] over BoxInt
+-- g_11 = 1, g_12 = 1, g_21 = 1, g_22 = 0 (det g = -1, asymmetric causal dissipation arrow, Rule 03 §1)
+public export
+substrateSBF : Multiset BoxInt (Pixel Substrate Coord2D)
+substrateSBF = AddM (MkPixel X X) 1 (AddM (MkPixel X Y) 1 (AddM (MkPixel Y X) 1 ZeroM))
+
 -----------------------------------------------------------------------
 -- 3. UNIVERSAL EVALUATION PIPELINE
 -----------------------------------------------------------------------
