@@ -80,6 +80,37 @@ Show FundamentalGeometry where
   show ParabolicGeom  = "Parabolic(Green)"
   show SubstrateGeom  = "Substrate(Null)"
 
+public export
+Ord FundamentalGeometry where
+  compare g1 g2 = compare (geometryTag g1) (geometryTag g2)
+    where
+      geometryTag : FundamentalGeometry -> Nat
+      geometryTag EllipticGeom   = 1
+      geometryTag HyperbolicGeom = 2
+      geometryTag ParabolicGeom  = 3
+      geometryTag SubstrateGeom  = 4
+
+||| Canonical capacity partition across the 4 fundamental geometries (Rule 03 §1 & §2).
+public export
+geometryCapacity : FundamentalGeometry -> Nat
+geometryCapacity EllipticGeom   = 27
+geometryCapacity HyperbolicGeom = 128
+geometryCapacity ParabolicGeom  = 55
+geometryCapacity SubstrateGeom  = 210
+
+||| Canonical token-to-geometry classifier mapping token influx index n (1 .. 210) to its exact geometry:
+||| Sector capacity bounds:
+||| - Parabolic (DM): 55 tokens (T_10 = 55 metric & dissipation sink)
+||| - Elliptic  (VM): 27 tokens (3^3 = 27 visible matter & gluon basis)
+||| - Hyperbolic(DE): 128 tokens (2^7 = 128 dark energy spectral register)
+||| Total: 55 + 27 + 128 = 210 (Primorial master capacity budget).
+public export
+geometryAtTokenIndex : Nat -> FundamentalGeometry
+geometryAtTokenIndex n =
+  if n <= 55 then ParabolicGeom
+  else if n <= 55 + 27 then EllipticGeom
+  else HyperbolicGeom
+
 ||| Bidirectional isomorphism: Converts Stage0 Metric to Stage1 FundamentalGeometry.
 public export
 metricToGeometry : Metric -> FundamentalGeometry

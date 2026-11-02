@@ -118,6 +118,24 @@ public export
 makeSymmetricMetric10 : List (Nat, BoxInt) -> SymmetricMetricTensor 10
 makeSymmetricMetric10 = makeSymmetricMetric 10
 
+||| Synthesizes the 10D spacetime metric tensor directly from a stream of 55 Parabolic Dark Matter tokens
+||| via deforested stream injection into makeSymmetricMetricStream 10 (Rule 04 §8).
+public export
+synthesizeMetricFromParabolicStream : FusedStream (Nat, BoxInt) -> SymmetricMetricTensor 10
+synthesizeMetricFromParabolicStream = makeSymmetricMetricStream 10
+
+||| Canonical 10D metric synthesis from token count (55 Parabolic tokens):
+||| Places weight 1 on the 10 diagonal entries (i, i) and weight 0 on the 45 off-diagonal moduli (i, j).
+public export
+synthesize10DMetricFromParabolicCount : Nat -> SymmetricMetricTensor 10
+synthesize10DMetricFromParabolicCount _ =
+  let pairs = map (\k =>
+                    let (i, j) = unpackMetricIndexDim 10 k
+                        w = if i == j then intToBoxInt 1 else intToBoxInt 0
+                    in (k, w))
+                  (the (List Nat) [0..54])
+  in makeSymmetricMetricStream 10 (stream pairs)
+
 ||| Flat Minkowski / Euclidean identity metric tensor of dimension `dim`.
 public export
 identityMetricTensor : (dim : Nat) -> SymmetricMetricTensor dim
