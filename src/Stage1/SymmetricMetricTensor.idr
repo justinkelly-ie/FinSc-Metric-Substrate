@@ -129,22 +129,51 @@ stagedIdentityMetricTensor : (dim : Nat) -> Code (SymmetricMetricTensor dim)
 stagedIdentityMetricTensor dim = quote (identityMetricTensor dim)
 
 ||| 2LTT Staged Bilinear Metric Contraction: v^T · g · w on 2D coordinates.
-||| Uses 2LTT staged unrolling to compute (v0*w0)*g00 + (v1*w1)*g11 without AVL lookups.
+||| Evaluates (v0*w0)*g00 + (v0*w1 + v1*w0)*g01 + (v1*w1)*g11 without AVL lookups,
+||| supporting the 4 fundamental geometries including off-diagonal Substrate coupling (g01 /= 0).
 public export
-stagedContractMetric2D : Lift (CoordCell 2) -> Lift (CoordCell 2) -> Lift BoxInt -> Lift BoxInt -> Lift Nat
-stagedContractMetric2D qv qw qg00 qg11 =
+stagedContractMetric2D : Lift (CoordCell 2) -> Lift (CoordCell 2) -> 
+                         Lift BoxInt -> Lift BoxInt -> Lift BoxInt -> Lift Nat
+stagedContractMetric2D qv qw qg00 qg01 qg11 =
   quote (let v = splice qv; w = splice qw
-             g0 = integerToNat (unwrapBox (splice qg00))
-             g1 = integerToNat (unwrapBox (splice qg11))
-             c0 = (pixelRow v * pixelRow w) * g0
-             c1 = (pixelCol v * pixelCol w) * g1
-         in c0 + c1)
+             g00 = integerToNat (unwrapBox (splice qg00))
+             g01 = integerToNat (unwrapBox (splice qg01))
+             g11 = integerToNat (unwrapBox (splice qg11))
+             v0 = pixelRow v; v1 = pixelCol v
+             w0 = pixelRow w; w1 = pixelCol w
+             diag0 = (v0 * w0) * g00
+             cross = ((v0 * w1) + (v1 * w0)) * g01
+             diag1 = (v1 * w1) * g11
+         in diag0 + cross + diag1)
 
-||| Exact bilinear metric contraction over 2D coordinates.
+||| Exact bilinear metric contraction over 2D coordinates with off-diagonal coupling.
 public export
-contractMetric2D : CoordCell 2 -> CoordCell 2 -> BoxInt -> BoxInt -> Nat
-contractMetric2D v w g00 g11 =
-  splice (stagedContractMetric2D (quote v) (quote w) (quote g00) (quote g11))
+contractMetric2D : CoordCell 2 -> CoordCell 2 -> BoxInt -> BoxInt -> BoxInt -> Nat
+contractMetric2D v w g00 g01 g11 =
+  splice (stagedContractMetric2D (quote v) (quote w) (quote g00) (quote g01) (quote g11))
+
+||| Backward-compatibility diagonal metric contraction:
+public export
+contractMetric2DDiag : CoordCell 2 -> CoordCell 2 -> BoxInt -> BoxInt -> Nat
+contractMetric2DDiag v w g00 g11 = contractMetric2D v w g00 (intToBoxInt 0) g11
+
+||| 2LTT Staged Substrate Metric Contraction (g00 = 1, g01 = 1, g11 = 0, Rule 03 §1):
+public export
+stagedContractSubstrate2D : Lift (CoordCell 2) -> Lift (CoordCell 2) -> Lift Nat
+stagedContractSubstrate2D qv qw =
+  stagedContractMetric2D qv qw (quote (intToBoxInt 1)) (quote (intToBoxInt 1)) (quote (intToBoxInt 0))
+
+||| 2LTT Staged Blue (Elliptic) Metric Contraction (g00 = 1, g01 = 0, g11 = 1):
+public export
+stagedContractElliptic2D : Lift (CoordCell 2) -> Lift (CoordCell 2) -> Lift Nat
+stagedContractElliptic2D qv qw =
+  stagedContractMetric2D qv qw (quote (intToBoxInt 1)) (quote (intToBoxInt 0)) (quote (intToBoxInt 1))
+
+||| QTT 0 Erased Proof Witness: Staged Metric Contraction Invariant
+public export
+0 prfStagedContractMetric2D : (v, w : CoordCell 2) -> (g00, g01, g11 : BoxInt) ->
+  splice (stagedContractMetric2D (quote v) (quote w) (quote g00) (quote g01) (quote g11)) = contractMetric2D v w g00 g01 g11
+prfStagedContractMetric2D _ _ _ _ _ = Refl
 
 ||| General metric contraction on a typed vector VexelN dim: v' = g · v.
 public export

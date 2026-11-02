@@ -2,6 +2,7 @@ module Stage0.Singleton.SBFMset
 
 import Stage0.Multiset
 import Stage0.Pixel
+import Stage1.Basis.Coordinate
 import public Stage0.BoxInt
 import public Stage0.Singleton.Bit
 
@@ -99,3 +100,46 @@ evalSBFMset matrix inputVec =
     matchSum (AddM (MkPixel r c) w rest) t =
       let val = lookupCount (r, c) t
       in (w * val) + matchSum rest t
+
+-----------------------------------------------------------------------
+-- 4. CANONICAL CELLMULTISET 2 BILINEAR METRIC FORMS
+-----------------------------------------------------------------------
+
+public export
+blueCellSBF : CellMultiset 2
+blueCellSBF = singletonCell (mkCell2 X X) (intToBoxInt 1) <+> singletonCell (mkCell2 Y Y) (intToBoxInt 1)
+
+public export
+redCellSBF : CellMultiset 2
+redCellSBF = singletonCell (mkCell2 X X) (intToBoxInt 1) <+> singletonCell (mkCell2 Y Y) (intToBoxInt (-1))
+
+public export
+greenCellSBF : CellMultiset 2
+greenCellSBF = singletonCell (mkCell2 X Y) (intToBoxInt 1) <+> singletonCell (mkCell2 Y X) (intToBoxInt 1)
+
+public export
+substrateCellSBF : CellMultiset 2
+substrateCellSBF = singletonCell (mkCell2 X X) (intToBoxInt 1) <+> 
+                   singletonCell (mkCell2 X Y) (intToBoxInt 1) <+> 
+                   singletonCell (mkCell2 Y X) (intToBoxInt 1)
+
+||| Universal bilinear form evaluator on canonical CellMultiset carriers: Q(v) = v^T · M · v.
+||| Evaluates over O(log N) AVL tree carriers with zero intermediate list allocations.
+public export
+evalCellSBF : CellMultiset 2 -> CellMultiset 1 -> BoxInt
+evalCellSBF metric vec =
+  foldBoxTreeL (\acc, (p, w) =>
+    let (u, v) = pixelSplitUnixels p
+        vu = lookupBoxTree u vec
+        vv = lookupBoxTree v vec
+    in acc + (w * vu * vv)
+  ) (intToBoxInt 0) metric
+
+||| Static verification witness: Substrate CellMultiset bilinear form on v = (1, 1) yields 3.
+||| (1 * 1^2) + 2 * (1 * 1 * 1) + (0 * 1^2) = 1 + 2 + 0 = 3.
+public export
+auditSubstrateCellSBFProof : Bool
+auditSubstrateCellSBFProof =
+  let vec = singletonCell (mkUnixel X) (intToBoxInt 1) <+> singletonCell (mkUnixel Y) (intToBoxInt 1)
+  in evalCellSBF substrateCellSBF vec == intToBoxInt 3
+
