@@ -107,9 +107,22 @@ geometryCapacity SubstrateGeom  = 210
 public export
 geometryAtTokenIndex : Nat -> FundamentalGeometry
 geometryAtTokenIndex n =
-  if n <= 55 then ParabolicGeom
-  else if n <= 55 + 27 then EllipticGeom
+  if n < 55 then ParabolicGeom
+  else if n < 55 + 27 then EllipticGeom
   else HyperbolicGeom
+
+||| Compile-time proof witness certifying exact zero-indexed capacity boundaries:
+||| Parabolic [0..54] (55 tokens), Elliptic [55..81] (27 tokens), Hyperbolic [82..209] (128 tokens).
+public export
+0 prfGeometryAtTokenIndexBoundaries :
+  ( geometryAtTokenIndex 0 = ParabolicGeom
+  , geometryAtTokenIndex 54 = ParabolicGeom
+  , geometryAtTokenIndex 55 = EllipticGeom
+  , geometryAtTokenIndex 81 = EllipticGeom
+  , geometryAtTokenIndex 82 = HyperbolicGeom
+  , geometryAtTokenIndex 209 = HyperbolicGeom
+  )
+prfGeometryAtTokenIndexBoundaries = (Refl, Refl, Refl, Refl, Refl, Refl)
 
 ||| Bidirectional isomorphism: Converts Stage0 Metric to Stage1 FundamentalGeometry.
 public export
