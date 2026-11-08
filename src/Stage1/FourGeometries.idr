@@ -65,6 +65,16 @@ data FundamentalGeometry =
   | ParabolicGeom 
   | SubstrateGeom
 
+||| The carrier list of all 4 fundamental geometries (Elliptic, Hyperbolic, Parabolic, Substrate).
+%inline public export
+fundamentalGeometriesList : List FundamentalGeometry
+fundamentalGeometriesList = [EllipticGeom, HyperbolicGeom, ParabolicGeom, SubstrateGeom]
+
+||| Fundamental geometry count (4), observed directly from the carrier list cardinality.
+%inline public export
+fundamentalGeometryCount : Nat
+fundamentalGeometryCount = length fundamentalGeometriesList
+
 public export
 Eq FundamentalGeometry where
   EllipticGeom   == EllipticGeom   = True
@@ -79,16 +89,6 @@ Show FundamentalGeometry where
   show HyperbolicGeom = "Hyperbolic(Red)"
   show ParabolicGeom  = "Parabolic(Green)"
   show SubstrateGeom  = "Substrate(Null)"
-
-public export
-Ord FundamentalGeometry where
-  compare g1 g2 = compare (geometryTag g1) (geometryTag g2)
-    where
-      geometryTag : FundamentalGeometry -> Nat
-      geometryTag EllipticGeom   = 1
-      geometryTag HyperbolicGeom = 2
-      geometryTag ParabolicGeom  = 3
-      geometryTag SubstrateGeom  = 4
 
 ||| Canonical capacity partition across the 4 fundamental geometries (Rule 03 §1 & §2).
 public export
@@ -162,15 +162,15 @@ triangularNumber = Stage1.FourGeometries.triangularSum
 ------------------------------------------------------------------------
 
 ||| Fundamental color multiset carrier basis [RedColor, GreenColor, BlueColor].
-public export
+%inline public export
 colorBasisList : List ColorCharge
 colorBasisList = [RedColor, GreenColor, BlueColor]
 
 ||| Manifest spatial basis dimension L = 3 (T^3 spatial torus canvas),
 ||| grounded definitionally in the color charge multiset carrier cardinality.
-public export
+%inline public export
 manifestSpatialDim : Nat
-manifestSpatialDim = 3
+manifestSpatialDim = length colorBasisList
 
 ||| Definitional proof that manifest spatial dimension matches color basis carrier length.
 public export
@@ -208,15 +208,15 @@ Show OctonionUnit where
   show E7 = "e7"
 
 ||| The 7-element imaginary octonionic basis carrier.
-public export
+%inline public export
 octonionBasisList : List OctonionUnit
 octonionBasisList = [E1, E2, E3, E4, E5, E6, E7]
 
 ||| Clifford / octonion generator degrees D = 7,
 ||| grounded in the octonion basis multiset cardinality.
-public export
+%inline public export
 cliffordGeneratorDim : Nat
-cliffordGeneratorDim = 7
+cliffordGeneratorDim = length octonionBasisList
 
 ||| Definitional proof that Clifford generator dimension matches octonion basis length.
 public export
@@ -247,9 +247,29 @@ Show SpacetimeBasis where
   show Space2 = "y"
   show Space3 = "z"
 
-public export
+%inline public export
 spacetimeBasisList : List SpacetimeBasis
 spacetimeBasisList = [Time0, Space1, Space2, Space3]
+
+||| 4D spacetime basis dimension (4), observed directly from the spacetime basis carrier list.
+%inline public export
+spacetimeBasisDim : Nat
+spacetimeBasisDim = length spacetimeBasisList
+
+||| Definitional proof that spacetime basis dimension matches spacetime basis list length.
+public export
+0 prfSpacetimeBasisDimGrounded : Stage1.FourGeometries.spacetimeBasisDim = length Stage1.FourGeometries.spacetimeBasisList
+prfSpacetimeBasisDimGrounded = Refl
+
+||| Definitional proof that spacetime dimension equals the number of fundamental geometries:
+public export
+0 prfSpacetimeDimEqualsGeometries : Stage1.FourGeometries.spacetimeBasisDim = Stage1.FourGeometries.fundamentalGeometryCount
+prfSpacetimeDimEqualsGeometries = Refl
+
+||| Definitional proof that spacetime dimension is the successor of manifest spatial dimension (1 temporal + 3 spatial):
+public export
+0 prfSpacetimeDimEqualsSpacePlusTime : Stage1.FourGeometries.spacetimeBasisDim = S Stage1.FourGeometries.manifestSpatialDim
+prfSpacetimeDimEqualsSpacePlusTime = Refl
 
 ||| 3-metric scale basis generators (Blue, Red, Green).
 public export
@@ -268,14 +288,24 @@ Show ScaleBasis where
   show ScaleRed   = "s_Red"
   show ScaleGreen = "s_Green"
 
-public export
+%inline public export
 scaleBasisList : List ScaleBasis
 scaleBasisList = [ScaleBlue, ScaleRed, ScaleGreen]
 
-||| 10D phase space basis dimension: direct sum of spacetime (4) + color (3) + scale (3) basis carriers.
+||| 3-metric scale basis dimension (3), observed directly from the scale basis carrier list.
+%inline public export
+scaleBasisDim : Nat
+scaleBasisDim = length scaleBasisList
+
+||| Definitional proof that scale basis dimension matches scale basis list length.
 public export
+0 prfScaleBasisDimGrounded : Stage1.FourGeometries.scaleBasisDim = length Stage1.FourGeometries.scaleBasisList
+prfScaleBasisDimGrounded = Refl
+
+||| 10D phase space basis dimension: direct sum of spacetime (4) + color (3) + scale (3) basis carriers.
+%inline public export
 phaseSpaceBasisDim : Nat
-phaseSpaceBasisDim = 10
+phaseSpaceBasisDim = spacetimeBasisDim + manifestSpatialDim + scaleBasisDim
 
 ||| Definitional proof that phase space dimension matches the basis list sum.
 public export

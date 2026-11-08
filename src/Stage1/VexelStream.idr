@@ -47,11 +47,11 @@ streamToCellMultisetBoxNat : {dim : Nat} -> BoxNat -> FS.FusedStream (CoordCell 
 streamToCellMultisetBoxNat fuel strm =
   FS.foldStreamNat (boxNatToNat fuel) (\tree, (c, w) =>
     if boxIsZero w then tree
-    else let cur = MT.lookupBoxTree c tree
+    else let cur = lookupCellMultiset c tree
              newW = cur + w
          in if boxIsZero newW
-              then MT.setBoxTree c (intToBoxInt 0) tree
-              else MT.setBoxTree c newW tree
+              then setCellMultiset c (intToBoxInt 0) tree
+              else setCellMultiset c newW tree
   ) MT.BoxLeaf strm
 
 ||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed SquareMaxel under BoxNat fuel bounds.

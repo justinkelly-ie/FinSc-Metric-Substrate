@@ -428,7 +428,7 @@ shiftSupportTree offset (Node h l x c r) =
 public export
 gohFactorDirectSumTree : {p, q : Nat} -> GohFactor p -> GohFactor q -> MultisetTree Pixel
 gohFactorDirectSumTree {p} fp fq =
-  gohFactorSupportTree fp <+> shiftSupportTree (gohDegree p) (gohFactorSupportTree fq)
+  mergeCellTokenTrees (gohFactorSupportTree fp) (shiftSupportTree (gohDegree p) (gohFactorSupportTree fq))
 
 ||| Companion support tree of a composite coupling (e.g. coupling39ObserverEpoch for 3 x 13):
 public export
@@ -462,7 +462,7 @@ gohPrimeSpectrumDirectSumTree primes =
         Nothing => (accTree, offset)
         Just (deg ** blockTree) =>
           let shiftedBlock = shiftSupportTree offset blockTree
-          in (accTree <+> shiftedBlock, offset + deg)
+          in (mergeCellTokenTrees accTree shiftedBlock, offset + deg)
 
 ||| Deforested N-ary prime spectrum companion direct sum support tree streaming over FusedStream:
 public export
@@ -477,7 +477,7 @@ gohPrimeSpectrumDirectSumStream strm =
         Nothing => (accTree, offset)
         Just (deg ** blockTree) =>
           let shiftedBlock = shiftSupportTree offset blockTree
-          in (accTree <+> shiftedBlock, offset + deg)
+          in (mergeCellTokenTrees accTree shiftedBlock, offset + deg)
 
 ||| Generates the subdiagonal shift entries directly in multiset tree space.
 public export

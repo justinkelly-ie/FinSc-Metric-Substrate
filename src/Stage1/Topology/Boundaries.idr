@@ -49,11 +49,11 @@ boundaryCell : {dim : Nat} -> CellMultiset (S dim) -> CellMultiset dim
 boundaryCell {dim} cells =
   foldBoxTreeL (\acc, (c, w) =>
     foldl (\innerAcc, (face, sign) =>
-      let cur = lookupBoxTree face innerAcc
+      let cur = lookupCellMultiset face innerAcc
           newW = cur + (w * sign)
       in if boxIsZero newW
-           then setBoxTree face (intToBoxInt 0) innerAcc
-           else setBoxTree face newW innerAcc
+           then setCellMultiset face (intToBoxInt 0) innerAcc
+           else setCellMultiset face newW innerAcc
     ) acc (cellBoundaryFaces c)
   ) BoxLeaf cells
 
@@ -148,12 +148,12 @@ coboundaryCell : {dim : Nat} -> CellMultiset (S dim) -> CellMultiset dim -> Cell
 coboundaryCell {dim} lattice cochain =
   foldBoxTreeL (\acc, (c, _) =>
     let val = foldl (\sumVal, (face, sign) =>
-                let faceCoeff = lookupBoxTree face cochain
+                let faceCoeff = lookupCellMultiset face cochain
                 in sumVal + (faceCoeff * sign)
               ) (intToBoxInt 0) (cellBoundaryFaces c)
     in if boxIsZero val
          then acc
-         else setBoxTree c val acc
+         else setCellMultiset c val acc
   ) BoxLeaf lattice
 
 ||| 0-cochain to 1-cochain Coboundary Operator (Discrete Gradient d_0: Ω^0 -> Ω^1).

@@ -31,6 +31,24 @@ public export
 0 prfTriangular4Is10 : triangularNat 4 = 10
 prfTriangular4Is10 = Refl
 
+||| Evaluates the physical moduli degrees of freedom dim(so(D)) for spacetime dimension D:
+||| Total symmetric components = T_D = D(D+1)/2. Diffeomorphism redundancies = D.
+||| Moduli DOF = T_D - D = T_{D-1} = triangularNat (D - 1).
+public export
+spacetimeModuliDegreesOfFreedom : (dim : Nat) -> Nat
+spacetimeModuliDegreesOfFreedom Z = 0
+spacetimeModuliDegreesOfFreedom (S k) = triangularNat k
+
+||| Verified Invariant: 10D spacetime moduli degrees of freedom = 45 (dim so(10)).
+public export
+0 prf10DModuliDimension : spacetimeModuliDegreesOfFreedom 10 = 45
+prf10DModuliDimension = Refl
+
+||| Verified Invariant: 4D spacetime moduli degrees of freedom = 6 (Lorentz group so(3,1)).
+public export
+0 prf4DModuliDimension : spacetimeModuliDegreesOfFreedom 4 = 6
+prf4DModuliDimension = Refl
+
 ------------------------------------------------------------------------
 -- 2. EXACT 2D <-> 1D COORDINATE BIJECTIONS (0 <= j <= i < dim)
 ------------------------------------------------------------------------
@@ -99,8 +117,8 @@ makeSymmetricMetric dim weights =
   let step : BoxMultisetTree Pixel -> (Nat, BoxInt) -> BoxMultisetTree Pixel
       step acc (k, w) =
         let (i, j) = unpackMetricIndexDim dim k
-            acc1 = setBoxTree (mkPixel i j) w acc
-            acc2 = if i /= j then setBoxTree (mkPixel j i) w acc1 else acc1
+            acc1 = setCellMultiset (mkPixel i j) w acc
+            acc2 = if i /= j then setCellMultiset (mkPixel j i) w acc1 else acc1
         in acc2
       tree = foldl step BoxLeaf weights
   in MkSymmetricMetricTensor (MkSquareMaxel tree)
@@ -112,8 +130,8 @@ makeSymmetricMetricStream dim strm =
   let step : BoxMultisetTree Pixel -> (Nat, BoxInt) -> BoxMultisetTree Pixel
       step acc (k, w) =
         let (i, j) = unpackMetricIndexDim dim k
-            acc1 = setBoxTree (mkPixel i j) w acc
-            acc2 = if i /= j then setBoxTree (mkPixel j i) w acc1 else acc1
+            acc1 = setCellMultiset (mkPixel i j) w acc
+            acc2 = if i /= j then setCellMultiset (mkPixel j i) w acc1 else acc1
         in acc2
       tree = foldStream step BoxLeaf strm
   in MkSymmetricMetricTensor (MkSquareMaxel tree)
@@ -223,8 +241,8 @@ prfStagedMetricContract _ _ = Refl
 public export
 perturbMetric00 : {dim : Nat} -> SymmetricMetricTensor dim -> BoxInt -> SymmetricMetricTensor dim
 perturbMetric00 (MkSymmetricMetricTensor (MkSquareMaxel tree)) defect =
-  let cur = lookupBoxTree (mkPixel 0 0) tree
-      newTree = setBoxTree (mkPixel 0 0) (cur + defect) tree
+  let cur = lookupCellMultiset (mkPixel 0 0) tree
+      newTree = setCellMultiset (mkPixel 0 0) (cur + defect) tree
   in MkSymmetricMetricTensor (MkSquareMaxel newTree)
 
 ------------------------------------------------------------------------
