@@ -417,3 +417,38 @@ public export
                           , fst (geometryDimension SubstrateGeom) = 210
                           )
 prfGeometryCapacities = (Refl, Refl, Refl, Refl)
+
+------------------------------------------------------------------------
+-- 7. FUEL DOMINANCE & CAPACITY PARTITION WITNESSES (RULE 01 & RULE 03)
+------------------------------------------------------------------------
+
+||| Formal compile-time witness certifying that the Primorial 210 budget is partitioned by the 3 geometries:
+public export
+0 prfPrimorial210Decomposition :
+  (Stage1.FourGeometries.ellipticLatticeCapacity + (Stage1.FourGeometries.hyperbolicRomCapacity + Stage1.FourGeometries.darkMatterTriangularResidue)) = Stage1.FourGeometries.primorial210Budget
+prfPrimorial210Decomposition = Refl
+
+||| Compile-time witness verifying Master Substrate fuel dominates Elliptic VM fuel:
+public export
+0 prfMasterFuelDominatesElliptic :
+  fuelLTE (gohSteps (geometryGohFuel EllipticGeom)) (gohSteps (geometryGohFuel SubstrateGeom)) = True
+prfMasterFuelDominatesElliptic = Refl
+
+||| Compile-time witness verifying Master Substrate fuel dominates Hyperbolic DE fuel:
+public export
+0 prfMasterFuelDominatesHyperbolic :
+  fuelLTE (gohSteps (geometryGohFuel HyperbolicGeom)) (gohSteps (geometryGohFuel SubstrateGeom)) = True
+prfMasterFuelDominatesHyperbolic = Refl
+
+||| Compile-time witness verifying Master Substrate fuel dominates Parabolic DM fuel:
+public export
+0 prfMasterFuelDominatesParabolic :
+  fuelLTE (gohSteps (geometryGohFuel ParabolicGeom)) (gohSteps (geometryGohFuel SubstrateGeom)) = True
+prfMasterFuelDominatesParabolic = Refl
+
+||| Compile-time witness verifying Master Substrate fuel dominates sequential Elliptic + Hyperbolic fuel:
+public export
+0 prfMasterFuelDominatesEllipticPlusHyperbolic :
+  fuelLTE (gohSteps (sequentialFuel (geometryGohFuel EllipticGeom) (geometryGohFuel HyperbolicGeom)))
+          (gohSteps (geometryGohFuel SubstrateGeom)) = True
+prfMasterFuelDominatesEllipticPlusHyperbolic = Refl
