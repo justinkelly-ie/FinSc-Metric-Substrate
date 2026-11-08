@@ -182,6 +182,16 @@ prfManifestSpatialDimGrounded = Refl
 ellipticLatticeCapacity : Nat
 ellipticLatticeCapacity = powerNat manifestSpatialDim manifestSpatialDim
 
+||| 2D Quark Color Slice Lattice Area (Tokens per Color Plane): 3^2 = 9.
+%inline public export
+sliceColorCapacity : Nat
+sliceColorCapacity = manifestSpatialDim * manifestSpatialDim
+
+||| Definitional proof that 3 color slices fill the 27-state 3D manifest lattice (9 * 3 = 27).
+public export
+0 prfColorSliceLatticeVolume : Stage1.FourGeometries.sliceColorCapacity * Stage1.FourGeometries.manifestSpatialDim = Stage1.FourGeometries.ellipticLatticeCapacity
+prfColorSliceLatticeVolume = Refl
+
 ||| The 7 imaginary octonionic units e_1 ... e_7 generating the Clifford algebra Cl(0, 7).
 public export
 data OctonionUnit = E1 | E2 | E3 | E4 | E5 | E6 | E7
