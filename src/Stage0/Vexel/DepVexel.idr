@@ -4,7 +4,7 @@ import Data.List
 import public Stage0.Token
 import Stage0.Singleton.DepSing
 import Stage0.Singleton.Sing
-import Stage0.Singleton.Bit
+import Stage0.Bit
 import Stage0.Vexel.Vexel
 import Stage0.Multiset
 

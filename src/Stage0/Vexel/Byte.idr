@@ -5,7 +5,7 @@ import public Stage0.Token
 import public Stage0.Singleton.Sing
 import public Stage0.BoxInt
 import Stage0.Multiset
-import public Stage0.Singleton.Bit
+import public Stage0.Bit
 
 %default total
 

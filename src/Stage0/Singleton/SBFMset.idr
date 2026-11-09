@@ -4,7 +4,7 @@ import Stage0.Multiset
 import Stage0.Pixel
 import Stage1.Basis.Coordinate
 import public Stage0.BoxInt
-import public Stage0.Singleton.Bit
+import public Stage0.Bit
 
 %default total
 

@@ -3,7 +3,7 @@ module Stage0.Vexel.Vexel
 import Stage0.Multiset
 import public Stage0.Token
 import Stage0.Singleton.Sing
-import Stage0.Singleton.Bit
+import Stage0.Bit
 import public Stage0.BoxInt
 import Data.List
 
