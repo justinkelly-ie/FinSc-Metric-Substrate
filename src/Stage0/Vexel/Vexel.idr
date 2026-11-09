@@ -1,6 +1,7 @@
 module Stage0.Vexel.Vexel
 
 import Stage0.Multiset
+import public Stage0.Token
 import Stage0.Singleton.Sing
 import Stage0.Singleton.Bit
 import public Stage0.BoxInt
@@ -8,21 +9,21 @@ import Data.List
 
 %default total
 
-||| A Vexel is a one-dimensional state vector represented as a multiset of Singletons.
+||| A Vexel is a one-dimensional state vector represented as a multiset of Tokens.
 ||| This is Wildberger's discrete, algebraic replacement for a standard vector.
 public export
 Vexel : (c : Type) -> (a : Type) -> Type
-Vexel c a = Multiset c (Sing a)
+Vexel c a = Multiset c (Token a)
 
 ||| Canonical unambiguous alias for polymorphic multiset state vectors.
 public export
 GenericVexel : (c : Type) -> (a : Type) -> Type
 GenericVexel = Vexel
 
-||| Checks if a singleton is full (non-zero).
-||| Since Sing always holds a value, any Sing a is always full.
+||| Checks if an atomic token is full (non-zero).
+||| Since Token always holds a value, any Token a is always full.
 public export
-isFull : Sing a -> Bool
+isFull : Token a -> Bool
 isFull _ = True
 
 ||| Check if an item exists in a list (wrapper for elem).
@@ -38,7 +39,7 @@ removeFirst x (y :: ys) = if x == y then ys else y :: removeFirst x ys
 
 ||| Evaluates addition (`+`) across a Vexel container.
 ||| Governed entirely by the localized structural fold-in rule:
-||| Adding two filled singleton tokens inside the same cell forces a collapse.
+||| Adding two filled tokens inside the same cell forces a collapse.
 public export
 addVexels : (Eq a, Num c, Eq c) => Vexel c a -> Vexel c a -> Vexel c a
 addVexels x y = annihilateMultiset (addMultiset x y)
@@ -47,5 +48,5 @@ addVexels x y = annihilateMultiset (addMultiset x y)
 public export
 lookupWeight : (Eq a, Num c, Eq c) => a -> Vexel c a -> c
 lookupWeight _ ZeroM = 0
-lookupWeight x (AddM (MkSing y) w rest) =
+lookupWeight x (AddM (MkToken y) w rest) =
   if x == y then w + lookupWeight x rest else lookupWeight x rest

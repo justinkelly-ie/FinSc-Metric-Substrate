@@ -1,6 +1,7 @@
 module Stage0.Vexel.Byte
 
 import Data.List
+import public Stage0.Token
 import public Stage0.Singleton.Sing
 import public Stage0.BoxInt
 import Stage0.Multiset
@@ -12,13 +13,13 @@ import public Stage0.Singleton.Bit
 -- BOOLE ALGEBRA OVER VEXELS (MULTISETS)
 --
 -- A Vexel representing logical state inputs/outputs.
--- Defined as a list of singleton bit-gates over Bit.
+-- Defined as a multiset of atomic bit-gates over Token state.
 -----------------------------------------------------------------------
 
-||| A Byte is a one-dimensional logic vector represented as a Vexel state.
+||| A Byte is a one-dimensional logic vector represented as a Vexel state over atomic tokens.
 public export
 Byte : (state : Type) -> Type
-Byte state = Multiset Bit (Sing state)
+Byte state = Multiset Bit (Token state)
 
 -----------------------------------------------------------------------
 -- VECTOR ARITHMETIC
@@ -33,19 +34,19 @@ addByte x y = annihilateMultiset (addMultiset x y)
 public export
 lookupWeight : Eq state => state -> Byte state -> Bit
 lookupWeight _ ZeroM = Zero
-lookupWeight x (AddM (MkSing y) w rest) =
+lookupWeight x (AddM (MkToken y) w rest) =
   if x == y then w + lookupWeight x rest else lookupWeight x rest
 
 ||| Pointwise multiplication (AND) of two Boole vectors.
 public export
 mulByte : (Eq state) => Byte state -> Byte state -> Byte state
 mulByte ZeroM _ = ZeroM
-mulByte (AddM (MkSing x) w1 xs) ys =
+mulByte (AddM (MkToken x) w1 xs) ys =
   let w2   = lookupWeight x ys
       prod = w1 * w2
   in if isZero prod
        then mulByte xs ys
-       else AddM (MkSing x) prod (mulByte xs ys)
+       else AddM (MkToken x) prod (mulByte xs ys)
 
 ||| Scalar multiplication: multiply every component by a Bit.
 public export
@@ -61,7 +62,7 @@ zeroByte = ZeroM
 public export
 oneByte : List state -> Byte state
 oneByte [] = ZeroM
-oneByte (x :: xs) = AddM (MkSing x) One (oneByte xs)
+oneByte (x :: xs) = AddM (MkToken x) One (oneByte xs)
 
 -----------------------------------------------------------------------
 -- PREDICATES
@@ -86,7 +87,7 @@ isNonZeroByte v = not (isZeroByte v)
 public export
 everyQisP : Eq state => Byte state -> Byte state -> Bool
 everyQisP ZeroM _ = True
-everyQisP (AddM (MkSing x) w xs) ys =
+everyQisP (AddM (MkToken x) w xs) ys =
   (isZero w || isOne (lookupWeight x ys)) && everyQisP xs ys
 
 ||| No Q is a P: Q · P = 0.
@@ -103,5 +104,5 @@ someQisP q p = isNonZeroByte (mulByte q p)
 public export
 someQnotP : Eq state => Byte state -> Byte state -> Bool
 someQnotP ZeroM _ = False
-someQnotP (AddM (MkSing x) w xs) ys =
+someQnotP (AddM (MkToken x) w xs) ys =
   (isOne w && not (isOne (lookupWeight x ys))) || someQnotP xs ys

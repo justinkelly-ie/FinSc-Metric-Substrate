@@ -88,23 +88,28 @@ xorGate : Eq state => LogicState state -> LogicState state -> LogicState state -
 xorGate in1 in2 output =
   wire in1 output + wire in2 output
 
-||| Evaluate the binary flag for a state in the weight-free Sing.
+||| Evaluate the binary flag for a state in the weight-free Token.
 public export
-evaluateSingState : Eq state => Sing (LogicState state) -> LogicState state -> Bit
-evaluateSingState (MkSing k) s = if k == s then One else Zero
+evaluateTokenState : Eq state => Token (LogicState state) -> LogicState state -> Bit
+evaluateTokenState (MkToken k) s = if k == s then One else Zero
+
+||| Legacy alias for evaluateTokenState.
+public export
+evaluateSingState : Eq state => Token (LogicState state) -> LogicState state -> Bit
+evaluateSingState = evaluateTokenState
 
 ||| Apply the Transformation MSet to an input state to compute the output state.
-||| Uses the new Sing-based modulo-2 parity addition to collapse duplicate targets.
+||| Uses the token-based modulo-2 parity addition to collapse duplicate targets.
 public export
-applyTransformation : Eq state => Sing (LogicState state) -> TransformationMSet state -> Vexel Bit (LogicState state)
+applyTransformation : Eq state => Token (LogicState state) -> TransformationMSet state -> Vexel Bit (LogicState state)
 applyTransformation _ ZeroM = ZeroM
-applyTransformation (MkSing k) (AddM (MkSingRelation src tgt) w rest) =
+applyTransformation (MkToken k) (AddM (MkSingRelation src tgt) w rest) =
   let current = if k == src && isOne w
                   then case tgt of
                          ConstState _ => ZeroM
-                         VarState v   => AddM (MkSing (VarState v)) One ZeroM
+                         VarState v   => AddM (MkToken (VarState v)) One ZeroM
                   else ZeroM
-      accumulatedRest = applyTransformation (MkSing k) rest
+      accumulatedRest = applyTransformation (MkToken k) rest
   in addVexels current accumulatedRest
 
 -----------------------------------------------------------------------
@@ -113,7 +118,7 @@ applyTransformation (MkSing k) (AddM (MkSingRelation src tgt) w rest) =
 
 ||| Wrap a single state into a Byte vector.
 public export
-toByte : Sing (LogicState state) -> Byte (LogicState state)
+toByte : Token (LogicState state) -> Byte (LogicState state)
 toByte s = AddM s One ZeroM
 
 ||| Apply a Transformation MSet (Maxel) to a Byte vector input.
