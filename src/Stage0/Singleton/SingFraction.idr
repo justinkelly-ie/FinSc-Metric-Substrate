@@ -6,6 +6,7 @@ import public Stage0.BoxInt
 import public Stage0.Singleton.Bit
 import Stage0.Vexel.Vexel
 import Stage0.Vexel.Byte
+import Stage1.UnixelFraction
 
 %default total
 
@@ -73,3 +74,20 @@ liftSingBitGateToBoxInt (AddM k w rest) =
 public export
 liftSingToRow2 : SingBooleFraction state -> Vexel BoxInt state
 liftSingToRow2 (OverSingCircuit num _) = liftSingBitGateToBoxInt num
+
+-----------------------------------------------------------------------
+-- 3. CANONICAL BRIDGE TO UNIXEL FRACTION
+-----------------------------------------------------------------------
+
+||| Converts a legacy SingBooleFraction to the canonical FractionalBox over Unixel.
+public export
+singBooleFractionToFractionalBox : SingBooleFraction state -> FractionalBox (SingBitGateMset state)
+singBooleFractionToFractionalBox (OverSingCircuit num (MkSing d)) =
+  mkFractionalBox num (if d == 0 then 1 else d)
+
+||| Converts a canonical FractionalBox over Unixel back to a legacy SingBooleFraction.
+public export
+fractionalBoxToSingBooleFraction : FractionalBox (SingBitGateMset state) -> SingBooleFraction state
+fractionalBoxToSingBooleFraction (OverUnixel num u) =
+  OverSingCircuit num (MkSing (unwrapUnixel u))
+
