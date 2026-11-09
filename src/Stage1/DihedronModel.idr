@@ -7,7 +7,7 @@ import Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
 import Stage1.MultisetTree as MT
 import Stage1.UnixelFraction as UF
-import Stage1.ProjectiveRotation as PR
+import Stage1.Carrier.Maxel
 import Stage1.TypeTheory.Staging
 
 %default total
@@ -141,6 +141,25 @@ fastDihedronPower (S f) d exp =
       squared = mulDihedron2 halfD halfD
   in if isOdd then mulDihedron2 d squared else squared
 
+||| Direct conversion of a Dihedron2 matrix into an AVL Maxel tree.
+public export
+dihedron2ToMaxel : Dihedron2 -> Maxel
+dihedron2ToMaxel (MkDihedron2 d00 d01 d10 d11) =
+  setCellMultiset (mkPixel 1 1) d00 (
+  setCellMultiset (mkPixel 1 2) d01 (
+  setCellMultiset (mkPixel 2 1) d10 (
+  setCellMultiset (mkPixel 2 2) d11 emptyMaxel)))
+
+||| Extracts a Dihedron2 matrix from an AVL Maxel tree.
+public export
+maxelToDihedron2 : Maxel -> Dihedron2
+maxelToDihedron2 m =
+  MkDihedron2
+    (lookupCellMultiset (mkPixel 1 1) m)
+    (lookupCellMultiset (mkPixel 1 2) m)
+    (lookupCellMultiset (mkPixel 2 1) m)
+    (lookupCellMultiset (mkPixel 2 2) m)
+
 ------------------------------------------------------------------------
 -- 2. MINKOWSKI 3D QUADRANCE & RELATIVISTIC TRANSFORMATIONS
 ------------------------------------------------------------------------
@@ -150,19 +169,36 @@ public export
 quadranceMink3 : Vect 3 BoxInt -> BoxInt
 quadranceMink3 [t, r, s] = (t * t) - (r * r) - (s * s)
 
+||| Minkowski relativistic inner product on 3D vectors:
+||| <v1, v2>_Mink = t1*t2 - r1*r2 - s1*s2.
+public export
+dotMink3 : Vect 3 BoxInt -> Vect 3 BoxInt -> BoxInt
+dotMink3 [t1, r1, s1] [t2, r2, s2] = (t1 * t2) - (r1 * r2) - (s1 * s2)
+
+||| Minkowski relativistic cross product (Wildberger Relativistic Rational Rotations 3, Def. 5):
+||| v1 x_Mink v2 = (r2*s1 - r1*s2, s1*t2 - t1*s2, t1*r2 - t2*r1).
+||| Notice: the first component has reversed sign compared to the Euclidean cross product!
+public export
+crossMink3 : Vect 3 BoxInt -> Vect 3 BoxInt -> Vect 3 BoxInt
+crossMink3 [t1, r1, s1] [t2, r2, s2] =
+  [ (r2 * s1) - (r1 * s2)
+  , (s1 * t2) - (t1 * s2)
+  , (t1 * r2) - (t2 * r1)
+  ]
+
 ||| Exact Projective Relativistic Velocity Addition (Wildberger Relativistic Rational Rotations 3):
-||| (v, d_v) (+) (u, d_u) = (d_u v + d_v u - v x u, d_v d_u - <v, u>).
+||| (v, d_v) (+) (u, d_u) = (d_u v + d_v u - v x_Mink u, d_v d_u - <v, u>_Mink).
 ||| Preserves exact rational denominators in homogenous coordinates across multi-step composition.
 public export
 velocityAdditionProjective : (Vect 3 BoxInt, BoxInt) -> (Vect 3 BoxInt, BoxInt) -> (Vect 3 BoxInt, BoxInt)
 velocityAdditionProjective (v1, d1) (v2, d2) =
-  let [cx, cy, cz] = PR.crossProduct3 v1 v2
+  let [cx, cy, cz] = crossMink3 v1 v2
       [t1, r1, s1] = v1
       [t2, r2, s2] = v2
       numT = (d2 * t1) + (d1 * t2) - cx
       numR = (d2 * r1) + (d1 * r2) - cy
       numS = (d2 * s1) + (d1 * s2) - cz
-      den = (d1 * d2) - PR.dotProduct3 v1 v2
+      den = (d1 * d2) - dotMink3 v1 v2
   in ([numT, numR, numS], den)
 
 ||| Relativistic Anchor Product Velocity Addition for unit-denominator velocities:
@@ -213,6 +249,21 @@ auditDihedronAdjugateIdentity d =
   let prod = mulDihedron2 d (adjugateDihedron2 d)
       det = detDihedron2 d
   in prod == MkDihedron2 det 0 0 det
+
+||| Audit: Dihedron2 <-> Maxel conversion round-trip preserves exact matrix entries.
+public export
+auditDihedron2MaxelRoundTripProof : Bool
+auditDihedron2MaxelRoundTripProof =
+  let d = MkDihedron2 (intToBoxInt 3) (intToBoxInt (-2)) (intToBoxInt 1) (intToBoxInt 4)
+  in maxelToDihedron2 (dihedron2ToMaxel d) == d
+
+||| Audit: Relativistic velocity addition with identity (zero velocity) returns exact original velocity.
+public export
+auditVelocityAdditionZeroIdentityProof : Bool
+auditVelocityAdditionZeroIdentityProof =
+  let zeroVel : (Vect 3 BoxInt, BoxInt) = ([intToBoxInt 0, intToBoxInt 0, intToBoxInt 0], intToBoxInt 1)
+      v1 : (Vect 3 BoxInt, BoxInt) = ([intToBoxInt 1, intToBoxInt 2, intToBoxInt 3], intToBoxInt 5)
+  in velocityAdditionProjective v1 zeroVel == v1
 
 ------------------------------------------------------------------------
 -- 4. RELATIVISTIC SPREAD TRANSFER DIHEDRON & STREAM GENERATOR (PHASE 4)

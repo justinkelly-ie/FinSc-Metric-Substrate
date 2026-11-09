@@ -1,7 +1,7 @@
 package FinSc-Metric-Substrate
 version = 0.4.0
 authors = "Justin Kelly"
-brief   = "Layer 0b Metric Spacetime Substrate, 4 Geometries, & Spatial Stencils"
+brief   = "Layer 1 Metric Spacetime Substrate, 4 Fundamental Geometries & DEC Nilpotency"
 
 depends = FinSc-Multiset, base, linear
 sourcedir = "src"
