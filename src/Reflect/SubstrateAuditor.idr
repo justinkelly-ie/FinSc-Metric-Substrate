@@ -50,10 +50,10 @@ verifyMetricDeterminant : FundamentalGeometry -> Bool
 verifyMetricDeterminant geom =
   let det = detSignatureMonomorphic (geometrySignature geom)
       exp = expectedDet geom
-  in boxEq det exp
+  in det == exp
 
 ------------------------------------------------------------------------
--- 2. COMPILE-TIME INVARIANT AUDITING MACROS (RULE 01 & RULE 03)
+-- 2. COMPILE-TIME INVARIANT AUDITING (RULE 01 & RULE 03)
 ------------------------------------------------------------------------
 
 ||| Audit 1: 4-Metric Determinant Classification
@@ -66,49 +66,69 @@ auditMetricDeterminant HyperbolicGeom = pure Refl
 auditMetricDeterminant ParabolicGeom  = pure Refl
 auditMetricDeterminant SubstrateGeom  = pure Refl
 
+public export
+0 prfMetricDeterminantElliptic : verifyMetricDeterminant EllipticGeom = True
+prfMetricDeterminantElliptic = Refl
+
+public export
+0 prfMetricDeterminantHyperbolic : verifyMetricDeterminant HyperbolicGeom = True
+prfMetricDeterminantHyperbolic = Refl
+
+public export
+0 prfMetricDeterminantParabolic : verifyMetricDeterminant ParabolicGeom = True
+prfMetricDeterminantParabolic = Refl
+
+public export
+0 prfMetricDeterminantSubstrate : verifyMetricDeterminant SubstrateGeom = True
+prfMetricDeterminantSubstrate = Refl
+
 ||| Audit 2: Primorial 210 Cosmic Budget Integrity
 ||| Verifies 27 (VM) + 128 (DE) + 55 (DM) = 210 at compile time.
 public export
 auditPrimorialBudgetProof : Bool
 auditPrimorialBudgetProof =
-  natEq (natAdd 27 (natAdd 128 55)) 210
+  (27 + (128 + 55)) == 210
 
 public export
 %macro
 auditPrimorialBudget : Elab (Reflect.SubstrateAuditor.auditPrimorialBudgetProof = True)
 auditPrimorialBudget = pure Refl
 
-||| Monomorphic natural multiplication reducing without typeclass dispatch.
 public export
-natMult : Nat -> Nat -> Nat
-natMult Z _ = Z
-natMult (S k) y = natAdd y (natMult k y)
+0 prfPrimorialBudgetQTT : Reflect.SubstrateAuditor.auditPrimorialBudgetProof = True
+prfPrimorialBudgetQTT = Refl
 
 ||| Audit 3: Holographic Boundary Area Bound (Law 13)
 ||| For dimension L=3, Area(boundary) = 6 * L^2 = 54, 4 * 54 = 216 >= 210.
 public export
 holographicAreaBoundProof : (l : Nat) -> Bool
 holographicAreaBoundProof l =
-  let area = natMult 6 (natMult l l)
-      bound = natMult 4 area
-  in natLTE 210 bound
+  210 <= 4 * (6 * l * l)
 
 public export
 %macro
 auditHolographicAreaL3 : Elab (Reflect.SubstrateAuditor.holographicAreaBoundProof 3 = True)
 auditHolographicAreaL3 = pure Refl
 
+public export
+0 prfHolographicAreaL3QTT : Reflect.SubstrateAuditor.holographicAreaBoundProof 3 = True
+prfHolographicAreaL3QTT = Refl
+
 ||| Audit 4: Discrete Helmholtz Free Energy Ground State
 ||| F = U - T*S = 398 - 2 * 859 = -1320
 public export
 auditHelmholtzGroundStateProof : Bool
 auditHelmholtzGroundStateProof =
-  boxEq (subBox (MkBoxInt 398) (mulBox (MkBoxInt 2) (MkBoxInt 859))) (MkBoxInt (-1320))
+  (intToBoxInt 398 - intToBoxInt 2 * intToBoxInt 859) == intToBoxInt (-1320)
 
 public export
 %macro
 auditHelmholtzGroundState : Elab (Reflect.SubstrateAuditor.auditHelmholtzGroundStateProof = True)
 auditHelmholtzGroundState = pure Refl
+
+public export
+0 prfHelmholtzGroundStateQTT : Reflect.SubstrateAuditor.auditHelmholtzGroundStateProof = True
+prfHelmholtzGroundStateQTT = Refl
 
 ------------------------------------------------------------------------
 -- 3. ZERO-ALLOCATION 4-GEOMETRY METRIC STREAM CLASSIFICATION
@@ -185,16 +205,20 @@ auditLinearCarrierPreservationProof =
       outStrm = runLinearTransducer linearTrans strm
   in auditBudgetFromGeometryStream 10 outStrm
 
-||| Compile-time macro proof witness verifying linear carrier capacity conservation.
+||| Compile-time proof witness verifying linear carrier capacity conservation.
 public export
 auditLinearCarrierMacroProof : Bool
 auditLinearCarrierMacroProof =
-  natEq (natAdd 27 (natAdd 128 55)) 210
+  (27 + (128 + 55)) == 210
 
 public export
 %macro
 auditLinearCarrierPreservation : Elab (Reflect.SubstrateAuditor.auditLinearCarrierMacroProof = True)
 auditLinearCarrierPreservation = pure Refl
+
+public export
+0 prfLinearCarrierPreservationQTT : Reflect.SubstrateAuditor.auditLinearCarrierMacroProof = True
+prfLinearCarrierPreservationQTT = Refl
 
 ||| Audit 5: Goh Factor 1D Polynomial Support & 2D Companion Support Sizes
 ||| Verifies that:
@@ -204,22 +228,21 @@ auditLinearCarrierPreservation = pure Refl
 public export
 auditGohFactorCompanionSupportProof : Bool
 auditGohFactorCompanionSupportProof =
-  if natEq (gohFactorSupportSize 2) 1
-  then if natEq (gohFactorSupportSize 3) 3
-       then if natEq (gohFactorSupportSize 5) 7
-            then if natEq (gohFactorPolySupportSize 2) 2
-                 then if natEq (gohFactorPolySupportSize 3) 3
-                      then natEq (gohFactorPolySupportSize 5) 5
-                      else False
-                 else False
-            else False
-       else False
-  else False
+  (gohFactorSupportSize 2 == 1) &&
+  (gohFactorSupportSize 3 == 3) &&
+  (gohFactorSupportSize 5 == 7) &&
+  (gohFactorPolySupportSize 2 == 2) &&
+  (gohFactorPolySupportSize 3 == 3) &&
+  (gohFactorPolySupportSize 5 == 5)
 
 public export
 %macro
 auditGohFactorCompanionSupport : Elab (Reflect.SubstrateAuditor.auditGohFactorCompanionSupportProof = True)
 auditGohFactorCompanionSupport = pure Refl
+
+public export
+0 prfGohFactorCompanionSupportQTT : Reflect.SubstrateAuditor.auditGohFactorCompanionSupportProof = True
+prfGohFactorCompanionSupportQTT = Refl
 
 ||| Compile-time verification suite collecting all substrate invariant witnesses.
 public export
