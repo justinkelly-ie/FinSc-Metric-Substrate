@@ -34,6 +34,19 @@ Eq BasisWeight where
   _      == _      = False
 
 public export
+Ord BasisWeight where
+  compare NegOne NegOne = EQ
+  compare NegOne _      = LT
+  compare _      NegOne = GT
+  compare Zero   Zero   = EQ
+  compare Zero   PosOne = LT
+  compare PosOne Zero   = GT
+  compare PosOne PosOne = EQ
+
+public export
+DiscreteCoord BasisWeight where
+
+public export
 Show BasisWeight where
   show NegOne = "-1"
   show Zero   = "0"
@@ -56,12 +69,10 @@ public export
 MetricSignature : Type
 MetricSignature = Box BasisWeight
 
-||| Monomorphic lookup of token multiplicity avoiding typeclass dictionary stalls.
+||| Lookup of token multiplicity in the AVL MetricSignature.
 public export
 lookupWeight : BasisWeight -> MetricSignature -> BoxInt
-lookupWeight _ (MkBox []) = MkBoxInt 0
-lookupWeight target (MkBox ((w, c) :: rest)) =
-  if basisWeightEq w target then c else lookupWeight target (MkBox rest)
+lookupWeight target sig = lookupBox target sig
 
 ||| Counts the number of occurrences of a given BasisWeight in a MetricSignature.
 %inline public export
@@ -107,14 +118,15 @@ minkowski4DSignature = MkBox [(PosOne, MkBoxInt 3), (NegOne, MkBoxInt 1)]
 ------------------------------------------------------------------------
 
 ||| Extracts the two diagonal metric weights from a 2D MetricSignature.
-||| Uses pattern matching on canonical multiset constructors for definitional reduction.
+||| Uses direct AVL multiset lookups for definitional reduction.
 public export
 signatureWeights2D : MetricSignature -> (BoxInt, BoxInt)
-signatureWeights2D (MkBox [(PosOne, MkBoxInt 2)])                            = (MkBoxInt 1, MkBoxInt 1)
-signatureWeights2D (MkBox [(PosOne, MkBoxInt 1), (NegOne, MkBoxInt 1)])      = (MkBoxInt 1, MkBoxInt (-1))
-signatureWeights2D (MkBox [(PosOne, MkBoxInt 1), (Zero, MkBoxInt 1)])        = (MkBoxInt 1, MkBoxInt 0)
-signatureWeights2D (MkBox [(Zero, MkBoxInt 2)])                              = (MkBoxInt 0, MkBoxInt 0)
-signatureWeights2D _                                                         = (MkBoxInt 1, MkBoxInt 1)
+signatureWeights2D sig =
+  if lookupBox PosOne sig == MkBoxInt 2 then (MkBoxInt 1, MkBoxInt 1)
+  else if lookupBox NegOne sig == MkBoxInt 1 then (MkBoxInt 1, MkBoxInt (-1))
+  else if lookupBox Zero sig == MkBoxInt 1 then (MkBoxInt 1, MkBoxInt 0)
+  else if lookupBox Zero sig == MkBoxInt 2 then (MkBoxInt 0, MkBoxInt 0)
+  else (MkBoxInt 1, MkBoxInt 1)
 
 ||| Generates a canonical 2D diagonal Maxel metric tensor from a 2D MetricSignature.
 ||| Uses token multiplicities directly to populate matrix diagonals.

@@ -2,7 +2,6 @@ module Stage0.Vexel.Vexel
 
 import Stage0.Multiset
 import public Stage0.Token
-import Stage0.Singleton.Sing
 import Stage0.Bit
 import public Stage0.BoxInt
 import Data.List
@@ -50,3 +49,27 @@ lookupWeight : (Eq a, Num c, Eq c) => a -> Vexel c a -> c
 lookupWeight _ ZeroM = 0
 lookupWeight x (AddM (MkToken y) w rest) =
   if x == y then w + lookupWeight x rest else lookupWeight x rest
+
+------------------------------------------------------------------------
+-- DEPENDENTLY TYPED VEXEL (DepVexel)
+------------------------------------------------------------------------
+
+||| A dependently typed Vexel tracking active coordinates in its type index.
+public export
+data DepVexel : (a : Type) -> List a -> Type where
+  DepEmptyV : DepVexel a []
+  DepAddV   : {x : a} -> DepToken a x -> {rest : List a} -> DepVexel a rest -> DepVexel a (x :: rest)
+
+public export
+freezeDepVexel : {0 contents : List a} -> DepVexel a contents -> List a
+freezeDepVexel DepEmptyV = []
+freezeDepVexel (DepAddV (MkDepToken x) prev) = x :: freezeDepVexel prev
+
+||| Maps a runtime Vexel (multiset of tokens) to a type-level list of active coordinates.
+public export
+vexelToMSet : Vexel Bit a -> List a
+vexelToMSet ZeroM = []
+vexelToMSet (AddM (MkToken x) w xs) =
+  if isOne w
+     then x :: vexelToMSet xs
+     else vexelToMSet xs

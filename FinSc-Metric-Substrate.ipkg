@@ -7,14 +7,11 @@ depends = FinSc-Multiset, base, linear
 sourcedir = "src"
 
 modules = MetricSubstrate,
-          Core,
           Stage0.Pixel,
           Stage0.Spread,
           Stage0.WitnessLedger,
           Stage0.UniverseState,
-          Stage0.DepMaxel,
           Stage0.Vexel.Byte,
-          Stage0.Vexel.DepVexel,
           Stage0.Vexel.Transformation,
           Stage0.Vexel.Vexel,
           Stage0.Singleton.SBFMset,
@@ -32,7 +29,6 @@ modules = MetricSubstrate,
           Stage1.Topology.Peaks,
           Stage1.Topology.PersistenceStream,
           Stage1.PhysicalUniverse.Stratification,
-          Stage1.SubstrateRepIso,
           Stage1.SymmetricMetricTensor,
 
           Reflect.SubstrateAuditor

@@ -2,6 +2,7 @@ module Stage1.SpatialStencil
 
 import Data.Vect
 import Stage0.BoxInt
+import Stage0.LinearBuffer
 import Stage0.Multiset
 import Stage1.MultisetDuality
 import Stage1.TypeTheory.Staging
@@ -318,3 +319,18 @@ auditTreeStencilProof =
       netFlux = c0 + cm1 + c1
   in c0 == intToBoxInt 2 && cm1 == intToBoxInt (-1) && c1 == intToBoxInt (-1) &&
      c2 == intToBoxInt 0 && netFlux == intToBoxInt 0
+
+--------------------------------------------------------------------------------
+-- 8. 1-QUANTITY PING-PONG DOUBLE-BUFFERED SPATIAL STENCIL STEPPER
+--------------------------------------------------------------------------------
+
+||| Advances a `1`-quantity `PingPongGrid n` by one causal pulse:
+||| consumes `readBuf` (t - 1) and `writeBuf` (t) linearly via `stepFn`,
+||| and performs an O(1) pointer swap (`swapBuffers`).
+public export
+stepPingPongStencil : {n : Nat}
+                   -> (stepFn : (1 r : LinearBuffer n) -> (1 w : LinearBuffer n) -> PingPongGrid n)
+                   -> (1 grid : PingPongGrid n)
+                   -> PingPongGrid n
+stepPingPongStencil stepFn (MkPingPongGrid r w) =
+  swapBuffers (stepFn r w)

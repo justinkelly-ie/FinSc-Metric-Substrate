@@ -2,7 +2,6 @@ module Stage0.Singleton.SingFraction
 
 import Stage0.Multiset
 import public Stage0.Token
-import Stage0.Singleton.Sing
 import public Stage0.BoxInt
 import public Stage0.Bit
 import Stage0.Vexel.Vexel

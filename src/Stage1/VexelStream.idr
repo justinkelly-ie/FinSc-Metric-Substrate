@@ -5,7 +5,6 @@ import Stage0.BoxInt
 import Stage0.BoxNat
 import Stage0.Multiset
 import Stage0.OnSeq.FusedStream as FS
-import Stage1.MultisetTree as MT
 import Stage1.Basis.Coordinate
 import Stage1.ProjectiveRotation as PR
 import Stage1.DihedronModel as DM
@@ -52,7 +51,7 @@ streamToCellMultisetBoxNat fuel strm =
          in if boxIsZero newW
               then setCellMultiset c (intToBoxInt 0) tree
               else setCellMultiset c newW tree
-  ) MT.BoxLeaf strm
+  ) BoxLeaf strm
 
 ||| Folds a FusedStream directly into an AVL BoxMultisetTree-backed SquareMaxel under BoxNat fuel bounds.
 public export

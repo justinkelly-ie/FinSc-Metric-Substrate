@@ -6,10 +6,8 @@ import public Stage0.Pixel
 import public Stage0.Spread
 import public Stage0.WitnessLedger
 import public Stage0.UniverseState
-import public Stage0.DepMaxel
 import public Stage0.Vexel.Byte
 import public Stage0.Vexel.Vexel
-import public Stage0.Vexel.DepVexel
 import public Stage0.Vexel.Transformation
 import public Stage0.Singleton.SBFMset
 import public Stage0.Singleton.SingFraction

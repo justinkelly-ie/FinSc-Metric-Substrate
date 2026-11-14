@@ -2,7 +2,6 @@ module Stage0.Vexel.Byte
 
 import Data.List
 import public Stage0.Token
-import public Stage0.Singleton.Sing
 import public Stage0.BoxInt
 import Stage0.Multiset
 import public Stage0.Bit

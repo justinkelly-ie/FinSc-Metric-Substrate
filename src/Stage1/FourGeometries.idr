@@ -3,6 +3,7 @@ module Stage1.FourGeometries
 import Stage0.BoxInt
 import Stage0.Pixel
 import Stage0.StructuralFuel
+import Stage1.Basis.Coordinate
 import Stage1.ScaleTransform
 import Stage1.TypeTheory.Smoothness
 import Data.Fin
@@ -23,6 +24,19 @@ Eq ColorCharge where
   GreenColor == GreenColor = True
   BlueColor  == BlueColor  = True
   _          == _          = False
+
+public export
+Ord ColorCharge where
+  compare RedColor   RedColor   = EQ
+  compare RedColor   _          = LT
+  compare _          RedColor   = GT
+  compare GreenColor GreenColor = EQ
+  compare GreenColor BlueColor  = LT
+  compare BlueColor  GreenColor = GT
+  compare BlueColor  BlueColor  = EQ
+
+public export
+DiscreteCoord ColorCharge where
 
 public export
 Show ColorCharge where
@@ -82,6 +96,22 @@ Eq FundamentalGeometry where
   ParabolicGeom  == ParabolicGeom  = True
   SubstrateGeom  == SubstrateGeom  = True
   _              == _              = False
+
+public export
+Ord FundamentalGeometry where
+  compare EllipticGeom   EllipticGeom   = EQ
+  compare EllipticGeom   _              = LT
+  compare _              EllipticGeom   = GT
+  compare HyperbolicGeom HyperbolicGeom = EQ
+  compare HyperbolicGeom _              = LT
+  compare _              HyperbolicGeom = GT
+  compare ParabolicGeom  ParabolicGeom  = EQ
+  compare ParabolicGeom  SubstrateGeom  = LT
+  compare SubstrateGeom  ParabolicGeom  = GT
+  compare SubstrateGeom  SubstrateGeom  = EQ
+
+public export
+DiscreteCoord FundamentalGeometry where
 
 public export
 Show FundamentalGeometry where
@@ -452,3 +482,15 @@ public export
   fuelLTE (gohSteps (sequentialFuel (geometryGohFuel EllipticGeom) (geometryGohFuel HyperbolicGeom)))
           (gohSteps (geometryGohFuel SubstrateGeom)) = True
 prfMasterFuelDominatesEllipticPlusHyperbolic = Refl
+
+||| Compile-time witness certifying that the 4 FundamentalGeometry dimensions match the
+||| `FiniteCoord` cardinalities of `EllipticVoxelCoord`, `HyperbolicModeCoord`, `ParabolicDrainCoord`,
+||| and `MasterSubstrateCoord` in `Stage1.Basis.Coordinate`.
+public export
+0 prfGeometryMatchesFiniteCoordCardinality :
+  ( fst (geometryDimension EllipticGeom)   = cardinality {k = EllipticVoxelCoord}
+  , fst (geometryDimension HyperbolicGeom) = cardinality {k = HyperbolicModeCoord}
+  , fst (geometryDimension ParabolicGeom)  = cardinality {k = ParabolicDrainCoord}
+  , fst (geometryDimension SubstrateGeom)  = cardinality {k = MasterSubstrateCoord}
+  )
+prfGeometryMatchesFiniteCoordCardinality = (Refl, Refl, Refl, Refl)

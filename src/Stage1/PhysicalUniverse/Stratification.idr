@@ -7,6 +7,7 @@ module Stage1.PhysicalUniverse.Stratification
 import Stage0.BoxInt
 import Stage0.Multiset
 import Stage1.FourGeometries
+import Stage1.MetricSignature
 import Stage1.MultisetDuality
 import Stage1.MultisetTensor
 import Data.Fin
@@ -240,3 +241,37 @@ prfSievePartitionCoherence = Refl
 public export
 0 prfHelmholtzGroundStateMinimum : (398 - (2 * 859)) = (-1320)
 prfHelmholtzGroundStateMinimum = Refl
+
+--------------------------------------------------------------------------------
+-- 6. LAYER 0 SUBSTRATE REPRESENTATION ISOMORPHISM
+--------------------------------------------------------------------------------
+
+||| Canonical Representation Isomorphism for Layer 0 Substrate Carrier.
+public export
+substrateRepIso : TheoryRepresentationIsomorphism L0_SubstrateCarrier BasisWeight BasisWeight
+substrateRepIso =
+  MkTheoryRepIso
+    "L0: Metric Basis Weight Algebra -> Multiset BasisWeight"
+    (\w => AddM w (MkBoxInt 1) ZeroM)
+    (\m => case m of
+             AddM w _ _ => w
+             ZeroM      => Zero)
+    (\w =>
+      let m = AddM w (MkBoxInt 1) ZeroM
+          w' = case m of
+                 AddM x _ _ => x
+                 ZeroM      => Zero
+      in basisWeightEq w' w
+    )
+
+public export
+0 prfSubstrateRepIsoPosOne : (verifyRoundTrip Stage1.PhysicalUniverse.Stratification.substrateRepIso) PosOne = True
+prfSubstrateRepIsoPosOne = Refl
+
+public export
+0 prfSubstrateRepIsoNegOne : (verifyRoundTrip Stage1.PhysicalUniverse.Stratification.substrateRepIso) NegOne = True
+prfSubstrateRepIsoNegOne = Refl
+
+public export
+0 prfSubstrateRepIsoZero : (verifyRoundTrip Stage1.PhysicalUniverse.Stratification.substrateRepIso) Zero = True
+prfSubstrateRepIsoZero = Refl
