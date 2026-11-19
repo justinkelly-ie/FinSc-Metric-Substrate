@@ -3,6 +3,7 @@ module Stage0.Singleton.SBFMset
 import Stage0.Multiset
 import Stage0.Pixel
 import Stage1.Basis.Coordinate
+import Stage1.Lenses
 import public Stage0.BoxInt
 import public Stage0.Bit
 
@@ -45,24 +46,26 @@ row1SBF = AddM (MkPixel Wire Wire) One ZeroM
 
 -- Row 7: Euclidean Blue Form [ ((X, X), 1), ((Y, Y), 1) ] over BoxInt
 public export
-blueSBF : Multiset BoxInt (Pixel Blue Coord2D)
-blueSBF = AddM (MkPixel X X) 1 (AddM (MkPixel Y Y) 1 ZeroM)
+blueSBF : Carrier (Pixel Blue Coord2D)
+blueSBF = singletonCarrier (MkPixel X X) 1 <+> singletonCarrier (MkPixel Y Y) 1
 
 -- Row 8: Minkowski Red Form [ ((X, X), 1), ((Y, Y), -1) ] over BoxInt
 public export
-redSBF : Multiset BoxInt (Pixel Red Coord2D)
-redSBF = AddM (MkPixel X X) 1 (AddM (MkPixel Y Y) (-1) ZeroM)
+redSBF : Carrier (Pixel Red Coord2D)
+redSBF = singletonCarrier (MkPixel X X) 1 <+> singletonCarrier (MkPixel Y Y) (-1)
 
 -- Row 9: Galilean Green Form [ ((X, Y), 1), ((Y, X), 1) ] over BoxInt
 public export
-greenSBF : Multiset BoxInt (Pixel Green Coord2D)
-greenSBF = AddM (MkPixel X Y) 1 (AddM (MkPixel Y X) 1 ZeroM)
+greenSBF : Carrier (Pixel Green Coord2D)
+greenSBF = singletonCarrier (MkPixel X Y) 1 <+> singletonCarrier (MkPixel Y X) 1
 
 -- Row 10: Master Substrate Form [ ((X, X), 1), ((X, Y), 1), ((Y, X), 1) ] over BoxInt
 -- g_11 = 1, g_12 = 1, g_21 = 1, g_22 = 0 (det g = -1, asymmetric causal dissipation arrow, Rule 03 §1)
 public export
-substrateSBF : Multiset BoxInt (Pixel Substrate Coord2D)
-substrateSBF = AddM (MkPixel X X) 1 (AddM (MkPixel X Y) 1 (AddM (MkPixel Y X) 1 ZeroM))
+substrateSBF : Carrier (Pixel Substrate Coord2D)
+substrateSBF = singletonCarrier (MkPixel X X) 1
+           <+> singletonCarrier (MkPixel X Y) 1
+           <+> singletonCarrier (MkPixel Y X) 1
 
 -----------------------------------------------------------------------
 -- 3. UNIVERSAL EVALUATION PIPELINE
@@ -100,6 +103,17 @@ evalSBFMset matrix inputVec =
     matchSum (AddM (MkPixel r c) w rest) t =
       let val = lookupCount (r, c) t
       in (w * val) + matchSum rest t
+
+||| Constructivist Carrier-indexed bilinear form evaluator over `Box (Pixel metric a)`.
+||| Evaluates Q(v) = Sum_{(r,c)} M[r,c] * v[r] * v[c] without intermediate tensor allocation.
+public export
+evalSBFCarrier : DiscreteCoord a => Carrier (Pixel metric a) -> Carrier a -> BoxInt
+evalSBFCarrier matrix inputVec =
+  foldBoxTreeL (\acc, (MkPixel r c, w) =>
+    let vr = lookupBox r inputVec
+        vc = lookupBox c inputVec
+    in addBox acc (mulBox w (mulBox vr vc))
+  ) (intToBoxInt 0) matrix
 
 -----------------------------------------------------------------------
 -- 4. CANONICAL CELLMULTISET 2 BILINEAR METRIC FORMS
@@ -161,3 +175,35 @@ substrateSBFCell : CellMultiset 2
 substrateSBFCell = substrateCellSBF
 
 
+
+
+------------------------------------------------------------------------
+-- EXTERNAL PHYSICAL LENS BINDINGS (`Stage1.Lenses` over `PureMultiset`)
+------------------------------------------------------------------------
+
+||| Maps a Pixel chromogeometry sector to its external `MetricLens` (`Stage1.Lenses`).
+public export
+sbfMetricToLens : Metric -> MetricLens
+sbfMetricToLens Blue      = blueEuclideanLens
+sbfMetricToLens Red       = redMinkowskiLens
+sbfMetricToLens Green     = greenGalileanLens
+sbfMetricToLens Substrate = redMinkowskiLens
+
+||| Canonical external Laurent scale and thermodynamic lenses attached to SBF carriers.
+public export
+sbfScaleLens : ScaleLens
+sbfScaleLens = laurentScaleLens
+
+public export
+sbfThermoLens : ThermodynamicLens
+sbfThermoLens = defaultThermoLens
+
+||| Evaluates `<u, v>` on `PureMultiset` 3-vectors through the external `MetricLens` for `Metric`.
+public export
+evalSBFWithLens : Metric -> PureMultiset -> PureMultiset -> BoxInt
+evalSBFWithLens m = traceWith (sbfMetricToLens m)
+
+||| Evaluates forward causal precedence `u < v` under the selected sector's `MetricLens`.
+public export
+sbfMetricCausalPrecedence : Metric -> PureMultiset -> PureMultiset -> Bool
+sbfMetricCausalPrecedence m = (sbfMetricToLens m).causallyPrecedes

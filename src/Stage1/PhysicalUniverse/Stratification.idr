@@ -120,10 +120,10 @@ record PhysicalLayerMorphism (lvl : PhysicalLevel) (srcTok : Type) (tgtTok : Typ
   constructor MkPhysicalLayerMorphism
   morphismName      : String
   operatingGeometry : FundamentalGeometry
-  ||| Forward multiset transducer (f_*)
-  forwardTransduce  : Multiset BoxInt srcTok -> Multiset BoxInt tgtTok
-  ||| Reverse multiset pullback adjoint (f^*)
-  pullbackAdjoint   : Multiset BoxInt tgtTok -> Multiset BoxInt srcTok
+  ||| Forward Carrier transducer (f_*)
+  forwardTransduce  : Carrier srcTok -> Carrier tgtTok
+  ||| Reverse Carrier pullback adjoint (f^*)
+  pullbackAdjoint   : Carrier tgtTok -> Carrier srcTok
 
 ||| Composes two sequential physical layer morphisms.
 public export
@@ -145,30 +145,30 @@ public export
 record TheoryRepresentationIsomorphism (lvl : PhysicalLevel) (theory : Type) (tok : Type) where
   constructor MkTheoryRepIso
   theoryName      : String
-  abstractToMset  : theory -> Multiset BoxInt tok
-  msetToAbstract  : Multiset BoxInt tok -> theory
+  abstractToMset  : theory -> Carrier tok
+  msetToAbstract  : Carrier tok -> theory
   verifyRoundTrip : theory -> Bool
 
 --------------------------------------------------------------------------------
 -- 4. QUANTITATIVE TYPE THEORY (QTT) LINEAR SESSION TRANSDUCERS (Rule 04)
 --------------------------------------------------------------------------------
 
-||| An InterLayerTransducer serializes a typed multiset session state migrating
+||| An InterLayerTransducer serializes a typed Carrier session state migrating
 ||| linearly between cosmological levels from `src` to `dst`.
 ||| Quantitative multiplicity guarantees at compile time that the payload cannot be
 ||| duplicated, dropped, or leaked across inter-layer boundary transitions.
 public export
 data InterLayerTransducer : (src : PhysicalLevel) -> (dst : PhysicalLevel) -> (tok : Type) -> Type where
-  MkInterLayerTransducer : (1 carriedPayload : Multiset BoxInt tok) -> InterLayerTransducer src dst tok
+  MkInterLayerTransducer : (1 carriedPayload : Carrier tok) -> InterLayerTransducer src dst tok
 
-||| Linear projection extracting the carried multiset payload from a transducer session.
+||| Linear projection extracting the carried Carrier payload from a transducer session.
 public export
-extractPayload : (1 tr : InterLayerTransducer src dst tok) -> Multiset BoxInt tok
+extractPayload : (1 tr : InterLayerTransducer src dst tok) -> Carrier tok
 extractPayload (MkInterLayerTransducer m) = m
 
-||| Linear injection constructing an inter-layer transducer session around a multiset payload.
+||| Linear injection constructing an inter-layer transducer session around a Carrier payload.
 public export
-wrapPayload : (1 m : Multiset BoxInt tok) -> InterLayerTransducer src dst tok
+wrapPayload : (1 m : Carrier tok) -> InterLayerTransducer src dst tok
 wrapPayload m = MkInterLayerTransducer m
 
 ||| A strictly linear morphism between physical levels enforcing Rule 04.
@@ -177,7 +177,7 @@ record LinearLayerMorphism (lvl : PhysicalLevel) (srcTok : Type) (tgtTok : Type)
   constructor MkLinearLayerMorphism
   linearMorphismName : String
   linearGeometry     : FundamentalGeometry
-  linearForward      : (1 m : Multiset BoxInt srcTok) -> Multiset BoxInt tgtTok
+  linearForward      : (1 m : Carrier srcTok) -> Carrier tgtTok
 
 ||| Advances a linear session across a LinearLayerMorphism boundary into destination level `l3`.
 public export
@@ -187,10 +187,10 @@ stepLayerLinear : (1 tr : InterLayerTransducer l1 l2 tokA) ->
 stepLayerLinear (MkInterLayerTransducer m) morph =
   MkInterLayerTransducer (morph.linearForward m)
 
-||| Advances a linear session using a direct linear multiset morphism `(1 m : Multiset ...) -> Multiset ...`.
+||| Advances a linear session using a direct linear Carrier morphism `(1 m : Carrier ...) -> Carrier ...`.
 public export
 stepLayerLinearDirect : (1 tr : InterLayerTransducer l1 l2 tokA) ->
-                        ((1 m : Multiset BoxInt tokA) -> Multiset BoxInt tokB) ->
+                        ((1 m : Carrier tokA) -> Carrier tokB) ->
                         InterLayerTransducer l2 l3 tokB
 stepLayerLinearDirect (MkInterLayerTransducer m) f =
   MkInterLayerTransducer (f m)
@@ -204,11 +204,11 @@ chainLayerLinear : (1 tr : InterLayerTransducer l1 l2 tokA) ->
 chainLayerLinear tr m1 m2 =
   stepLayerLinear (stepLayerLinear tr m1) m2
 
-||| Linearly chains two direct multiset morphisms across sequential physical levels.
+||| Linearly chains two direct Carrier morphisms across sequential physical levels.
 public export
 chainLayerLinearDirect : (1 tr : InterLayerTransducer l1 l2 tokA) ->
-                         ((1 m : Multiset BoxInt tokA) -> Multiset BoxInt tokB) ->
-                         ((1 m : Multiset BoxInt tokB) -> Multiset BoxInt tokC) ->
+                         ((1 m : Carrier tokA) -> Carrier tokB) ->
+                         ((1 m : Carrier tokB) -> Carrier tokC) ->
                          InterLayerTransducer l3 l4 tokC
 chainLayerLinearDirect tr f1 f2 =
   stepLayerLinearDirect (stepLayerLinearDirect tr f1) f2
@@ -251,16 +251,16 @@ public export
 substrateRepIso : TheoryRepresentationIsomorphism L0_SubstrateCarrier BasisWeight BasisWeight
 substrateRepIso =
   MkTheoryRepIso
-    "L0: Metric Basis Weight Algebra -> Multiset BasisWeight"
-    (\w => AddM w (MkBoxInt 1) ZeroM)
+    "L0: Metric Basis Weight Algebra -> Carrier BasisWeight"
+    (\w => singletonCarrier w (MkBoxInt 1))
     (\m => case m of
-             AddM w _ _ => w
-             ZeroM      => Zero)
+             BoxNode _ _ w _ _ => w
+             BoxLeaf           => Zero)
     (\w =>
-      let m = AddM w (MkBoxInt 1) ZeroM
+      let m = singletonCarrier w (MkBoxInt 1)
           w' = case m of
-                 AddM x _ _ => x
-                 ZeroM      => Zero
+                 BoxNode _ _ x _ _ => x
+                 BoxLeaf           => Zero
       in basisWeightEq w' w
     )
 

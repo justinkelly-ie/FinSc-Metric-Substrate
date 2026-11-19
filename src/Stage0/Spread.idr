@@ -12,28 +12,28 @@ import Stage0.OnSeq.FusedStream as FS
 ------------------------------------------------------------------------
 
 ||| Multiset formulation of a 1D Spread Polynomial in indeterminate s.
-||| Basis element Nat tracks monomial degree s^k, and BoxInt tracks the integer coefficient.
+||| Basis coordinate Nat tracks monomial degree s^k, and BoxInt tracks the integer coefficient.
 public export
 0 SpreadMSet : Type
-SpreadMSet = Multiset BoxInt Nat
+SpreadMSet = Carrier Nat
 
-||| Step transition for multiset-based spread polynomial recurrence:
+||| Step transition for carrier-based spread polynomial recurrence:
 ||| S_n(s) = 2*S_{n-1}(s) - 4*s*S_{n-1}(s) - S_{n-2}(s) + 2*s
 public export
 stepSpreadMSet : SpreadMSet -> SpreadMSet -> SpreadMSet
 stepSpreadMSet sPrev sCurr =
-  let term1 = scaleMultiset (intToBoxInt 2) sCurr
-      term2 = scaleMultiset (intToBoxInt (-4)) (mapMultiset S sCurr)
-      term3 = negateMultiset sPrev
-      term4 = AddM 1 (intToBoxInt 2) ZeroM
-  in annihilateMultiset (term1 <+> term2 <+> term3 <+> term4)
+  let term1 = scaleCarrier (intToBoxInt 2) sCurr
+      term2 = scaleCarrier (intToBoxInt (-4)) (pushforwardCarrier S sCurr)
+      term3 = negateBox sPrev
+      term4 = singletonCarrier (the Nat 1) (intToBoxInt 2)
+  in term1 <+> term2 <+> term3 <+> term4
 
 ||| O(n) linear multiset evaluation of Spread Polynomial S_n(s).
 public export
 spreadMSet : Nat -> SpreadMSet
-spreadMSet Z = ZeroM
-spreadMSet (S Z) = AddM 1 (intToBoxInt 1) ZeroM
-spreadMSet (S (S k)) = go k ZeroM (AddM 1 (intToBoxInt 1) ZeroM)
+spreadMSet Z = neutral
+spreadMSet (S Z) = singletonCarrier (the Nat 1) (intToBoxInt 1)
+spreadMSet (S (S k)) = go k neutral (singletonCarrier (the Nat 1) (intToBoxInt 1))
   where
     go : Nat -> SpreadMSet -> SpreadMSet -> SpreadMSet
     go Z     prev curr = stepSpreadMSet prev curr

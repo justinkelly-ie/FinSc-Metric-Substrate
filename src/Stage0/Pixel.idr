@@ -91,6 +91,9 @@ Ord a => Ord (Pixel metric a) where
       o  => o
 
 public export
+DiscreteCoord a => DiscreteCoord (Pixel metric a) where
+
+public export
 Show a => Show (Pixel metric a) where
   show (MkPixel s t) = "(" ++ show s ++ ", " ++ show t ++ ")"
 

@@ -1,6 +1,7 @@
 module Stage1.SpatialStencil
 
 import Data.Vect
+import Data.Fin
 import Stage0.BoxInt
 import Stage0.LinearBuffer
 import Stage0.Multiset
@@ -45,7 +46,7 @@ interface Functor w => SpatialStencil (0 w : Type -> Type) where
   applyStencil : (w a -> b) -> w a -> w b
 
 ||| 2LTT Staged Stencil Evaluation: Pre-evaluates local neighborhood convolution at Stage 1.
-%inline public export
+public export
 stagedApplyStencil : SpatialStencil w => Lift (w a -> b) -> Lift (w a) -> w b
 stagedApplyStencil qRule qGrid = applyStencil (splice qRule) (splice qGrid)
 
@@ -334,3 +335,174 @@ stepPingPongStencil : {n : Nat}
                    -> PingPongGrid n
 stepPingPongStencil stepFn (MkPingPongGrid r w) =
   swapBuffers (stepFn r w)
+
+--------------------------------------------------------------------------------
+-- 9. 2D / 3D PERIMETER-PEELED PING-PONG STENCIL STEPPERS (`Rule 08` §4)
+--------------------------------------------------------------------------------
+
+private
+writeAtNat : {n : Nat} -> Nat -> BoxInt -> Vect n BoxInt -> Vect n BoxInt
+writeAtNat i v vec =
+  case natToFin i n of
+    Just f  => replaceAt f v vec
+    Nothing => vec
+
+private
+readAtNat : {n : Nat} -> Vect n BoxInt -> Nat -> BoxInt
+readAtNat vec i =
+  case natToFin i n of
+    Just f  => index f vec
+    Nothing => intToBoxInt 0
+
+||| Structurally terminating counted loop over `[start, start + count)`.
+private
+repeatRange : Nat -> Nat -> (Nat -> a -> a) -> a -> a
+repeatRange _     Z     _ acc = acc
+repeatRange start (S k) f acc = repeatRange (S start) k f (f start acc)
+
+||| Resolves an out-of-range coordinate on an axis of length `n` according to the perimeter policy
+||| (`Mirror` reflects onto the cell itself, `Periodic` wraps modulo `n`).
+private
+resolveAxis : PerimeterPolicy -> Integer -> Integer -> Integer -> Nat
+resolveAxis pol x n self =
+  if x >= 0 && x < n
+    then integerToNat x
+    else case pol of
+           PeriodicPerimeter => integerToNat (((x `mod` n) + n) `mod` n)
+           _                 => integerToNat self
+
+||| Advances a `1`-quantity 2D `PingPongGrid (rows * cols)` (row-major) by one pulse with a 5-point
+||| stencil `fn centre left right up down`. Interior cells run with direct index strides and no
+||| boundary-policy branching; only the four perimeter edges are peeled and resolved through the
+||| `PerimeterPolicy` (`ZeroPerimeter` writes `0` on the perimeter, matching 1D semantics).
+public export
+stepPingPong2D5PointWithPolicy : (rows, cols : Nat)
+                              -> PerimeterPolicy
+                              -> (BoxInt -> BoxInt -> BoxInt -> BoxInt -> BoxInt -> BoxInt)
+                              -> (1 grid : PingPongGrid (rows * cols))
+                              -> PingPongGrid (rows * cols)
+stepPingPong2D5PointWithPolicy rows cols pol fn (MkPingPongGrid (MkLinearBuffer rTok) (MkLinearBuffer wTok)) =
+  let rd = readAtNat rTok
+      rI = natToInteger rows
+      cI = natToInteger cols
+      interiorCell : Nat -> Nat -> Vect (rows * cols) BoxInt -> Vect (rows * cols) BoxInt
+      interiorCell r c acc =
+        let idx = r * cols + c
+        in writeAtNat idx
+             (fn (rd idx) (rd (minus idx 1)) (rd (S idx)) (rd (minus idx cols)) (rd (idx + cols)))
+             acc
+      perimCell : Nat -> Nat -> Vect (rows * cols) BoxInt -> Vect (rows * cols) BoxInt
+      perimCell r c acc =
+        let idx = r * cols + c
+            ri  = natToInteger r
+            ci  = natToInteger c
+            at : Integer -> Integer -> BoxInt
+            at rr cc = rd (resolveAxis pol rr rI ri * cols + resolveAxis pol cc cI ci)
+            v = case pol of
+                  ZeroPerimeter => intToBoxInt 0
+                  _ => fn (rd idx) (at ri (ci - 1)) (at ri (ci + 1)) (at (ri - 1) ci) (at (ri + 1) ci)
+        in writeAtNat idx v acc
+      w1 = repeatRange 1 (minus rows 2)
+             (\r, a => repeatRange 1 (minus cols 2) (\c, a2 => interiorCell r c a2) a) wTok
+      w2 = repeatRange 0 cols (\c, a => perimCell 0 c (perimCell (minus rows 1) c a)) w1
+      w3 = repeatRange 1 (minus rows 2) (\r, a => perimCell r 0 (perimCell r (minus cols 1) a)) w2
+  in MkPingPongGrid (MkLinearBuffer w3) (MkLinearBuffer rTok)
+
+||| Advances a `1`-quantity 3D `PingPongGrid (dx * (dy * dz))` (index `(x * dy + y) * dz + z`) by one
+||| pulse with a 7-point stencil `fn centre xm xp ym yp zm zp`. The six boundary faces are peeled;
+||| interior cells use direct strides (`dy*dz`, `dz`, `1`) with no policy branching.
+public export
+stepPingPong3D7PointWithPolicy : (dx, dy, dz : Nat)
+                              -> PerimeterPolicy
+                              -> (BoxInt -> BoxInt -> BoxInt -> BoxInt -> BoxInt -> BoxInt -> BoxInt -> BoxInt)
+                              -> (1 grid : PingPongGrid (dx * (dy * dz)))
+                              -> PingPongGrid (dx * (dy * dz))
+stepPingPong3D7PointWithPolicy dx dy dz pol fn (MkPingPongGrid (MkLinearBuffer rTok) (MkLinearBuffer wTok)) =
+  let rd  = readAtNat rTok
+      dxI = natToInteger dx
+      dyI = natToInteger dy
+      dzI = natToInteger dz
+      sx  = dy * dz
+      lin : Nat -> Nat -> Nat -> Nat
+      lin x y z = (x * dy + y) * dz + z
+      interiorCell : Nat -> Nat -> Nat -> Vect (dx * (dy * dz)) BoxInt -> Vect (dx * (dy * dz)) BoxInt
+      interiorCell x y z acc =
+        let idx = lin x y z
+        in writeAtNat idx
+             (fn (rd idx) (rd (minus idx sx)) (rd (idx + sx)) (rd (minus idx dz)) (rd (idx + dz))
+                 (rd (minus idx 1)) (rd (S idx)))
+             acc
+      perimCell : Nat -> Nat -> Nat -> Vect (dx * (dy * dz)) BoxInt -> Vect (dx * (dy * dz)) BoxInt
+      perimCell x y z acc =
+        let idx = lin x y z
+            xi = natToInteger x
+            yi = natToInteger y
+            zi = natToInteger z
+            at : Integer -> Integer -> Integer -> BoxInt
+            at a b c = rd (lin (resolveAxis pol a dxI xi) (resolveAxis pol b dyI yi) (resolveAxis pol c dzI zi))
+            v = case pol of
+                  ZeroPerimeter => intToBoxInt 0
+                  _ => fn (rd idx) (at (xi - 1) yi zi) (at (xi + 1) yi zi)
+                          (at xi (yi - 1) zi) (at xi (yi + 1) zi)
+                          (at xi yi (zi - 1)) (at xi yi (zi + 1))
+        in writeAtNat idx v acc
+      w1 = repeatRange 1 (minus dx 2)
+             (\x, a => repeatRange 1 (minus dy 2)
+                (\y, a2 => repeatRange 1 (minus dz 2) (\z, a3 => interiorCell x y z a3) a2) a) wTok
+      -- x faces
+      w2 = repeatRange 0 dy
+             (\y, a => repeatRange 0 dz
+                (\z, a2 => perimCell 0 y z (perimCell (minus dx 1) y z a2)) a) w1
+      -- y faces
+      w3 = repeatRange 1 (minus dx 2)
+             (\x, a => repeatRange 0 dz
+                (\z, a2 => perimCell x 0 z (perimCell x (minus dy 1) z a2)) a) w2
+      -- z faces
+      w4 = repeatRange 1 (minus dx 2)
+             (\x, a => repeatRange 1 (minus dy 2)
+                (\y, a2 => perimCell x y 0 (perimCell x y (minus dz 1) a2)) a) w3
+  in MkPingPongGrid (MkLinearBuffer w4) (MkLinearBuffer rTok)
+
+private
+sumVectBox : Vect n BoxInt -> BoxInt
+sumVectBox = foldl addBox (intToBoxInt 0)
+
+||| Audit: 2D periodic 5-point Laplacian on `2 x 2` matches `stagedLaplacian2D` and conserves flux.
+public export
+auditPingPong2D5Point : Bool
+auditPingPong2D5Point =
+  let v : Vect 4 BoxInt
+      v = [intToBoxInt 10, intToBoxInt 20, intToBoxInt 30, intToBoxInt 40]
+      lap = \c, l, r, u, d => subBox (mulBox (intToBoxInt 4) c) (addBox (addBox l r) (addBox u d))
+      out = stepPingPong2D5PointWithPolicy 2 2 PeriodicPerimeter lap
+              (MkPingPongGrid (MkLinearBuffer v) (createLinearBuffer 4))
+  in case out of
+       MkPingPongGrid (MkLinearBuffer o) _ =>
+         o == [intToBoxInt (-60), intToBoxInt (-20), intToBoxInt 20, intToBoxInt 60] &&
+         sumVectBox o == intToBoxInt 0
+
+||| Audit: 3D periodic 7-point Laplacian of a centre delta on `3 x 3 x 3` gives `6` at the centre,
+||| `-1` on the six face-centres, and exact zero net flux.
+public export
+auditPingPong3D7Point : Bool
+auditPingPong3D7Point =
+  let v : Vect 27 BoxInt
+      v = writeAtNat 13 (intToBoxInt 1) (replicate 27 (intToBoxInt 0))
+      lap = \c, xm, xp, ym, yp, zm, zp =>
+              subBox (mulBox (intToBoxInt 6) c) (addBox (addBox (addBox xm xp) (addBox ym yp)) (addBox zm zp))
+      out = stepPingPong3D7PointWithPolicy 3 3 3 PeriodicPerimeter lap
+              (MkPingPongGrid (MkLinearBuffer v) (createLinearBuffer 27))
+  in case out of
+       MkPingPongGrid (MkLinearBuffer o) _ =>
+         readAtNat o 13 == intToBoxInt 6 &&
+         readAtNat o 4 == intToBoxInt (-1) &&
+         readAtNat o 22 == intToBoxInt (-1) &&
+         sumVectBox o == intToBoxInt 0
+
+public export
+0 prfPingPong2D5Point : (Stage1.SpatialStencil.auditPingPong2D5Point = True)
+prfPingPong2D5Point = Refl
+
+public export
+0 prfPingPong3D7Point : (Stage1.SpatialStencil.auditPingPong3D7Point = True)
+prfPingPong3D7Point = Refl

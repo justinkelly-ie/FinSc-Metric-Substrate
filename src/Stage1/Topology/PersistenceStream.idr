@@ -36,7 +36,7 @@ Eq BoundaryToken where
   (MkBoundaryToken d1 m1) == (MkBoundaryToken d2 m2) = d1 == d2 && m1 == m2
 
 ||| Unfolds a list of simplex boundary multiplicities into a deforested PersistenceStream.
-%inline public export
+public export
 unfoldPersistenceStream : List (SimplexDimension, BoxInt) -> FusedStream BoundaryToken
 unfoldPersistenceStream items = MkStream nextStep items
   where
@@ -45,17 +45,17 @@ unfoldPersistenceStream items = MkStream nextStep items
     nextStep ((dim, mult) :: rest) = Yield (MkBoundaryToken dim mult) rest
 
 ||| Unfolds a vector of simplex boundary multiplicities into a deforested PersistenceStream.
-%inline public export
+public export
 unfoldPersistenceStreamVect : {n : Nat} -> Vect n (SimplexDimension, BoxInt) -> FusedStream BoundaryToken
 unfoldPersistenceStreamVect items = unfoldPersistenceStream (toList items)
 
 ||| Deforested stream sifting operator filtering boundary tokens without intermediate allocations.
-%inline public export
+public export
 siftPersistenceStream : (BoundaryToken -> Bool) -> FusedStream BoundaryToken -> FusedStream BoundaryToken
 siftPersistenceStream = siftFusedStream
 
 ||| Sifts a persistence boundary stream by a specific simplex dimension tag.
-%inline public export
+public export
 siftByDimension : SimplexDimension -> FusedStream BoundaryToken -> FusedStream BoundaryToken
 siftByDimension dim = siftFusedStream (\tok => dimension tok == dim)
 

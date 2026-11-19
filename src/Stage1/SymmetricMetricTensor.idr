@@ -1,6 +1,9 @@
 module Stage1.SymmetricMetricTensor
 
 import Stage0.BoxInt
+import Stage0.Token
+import Stage0.Multiset
+import Stage1.Basis.CoordCell
 import Stage1.Basis.Coordinate
 import Stage1.MultisetTree
 import Stage0.PrimeMultiset
@@ -237,13 +240,28 @@ public export
                             splice (stagedMetricContract (quote g) v) = contractMetric g v
 prfStagedMetricContract _ _ = Refl
 
+public export
+metricPixel00 : Pixel
+metricPixel00 = mkPixel 0 0
+
+addMetricPixel00 : BoxInt -> Carrier Pixel -> Maybe (Carrier Pixel)
+addMetricPixel00 dw (BoxNode h BoxLeaf (ConsCell (MkToken Z) (ConsCell (MkToken Z) ZeroCell)) c r) =
+  let newW = addBox c dw
+  in if boxIsZero newW then Nothing else Just (BoxNode h BoxLeaf metricPixel00 newW r)
+addMetricPixel00 dw (BoxNode h l k c r) =
+  case addMetricPixel00 dw l of
+    Nothing => Nothing
+    Just l' => Just (BoxNode h l' k c r)
+addMetricPixel00 _ BoxLeaf = Nothing
+
 ||| Perturbs the (0, 0) timelike metric entry with energy-momentum curvature back-reaction.
 public export
 perturbMetric00 : {dim : Nat} -> SymmetricMetricTensor dim -> BoxInt -> SymmetricMetricTensor dim
-perturbMetric00 (MkSymmetricMetricTensor (MkSquareMaxel tree)) defect =
-  let cur = lookupCellMultiset (mkPixel 0 0) tree
-      newTree = setCellMultiset (mkPixel 0 0) (cur + defect) tree
-  in MkSymmetricMetricTensor (MkSquareMaxel newTree)
+perturbMetric00 m@(MkSymmetricMetricTensor (MkSquareMaxel tree)) defect =
+  if boxIsZero defect then m
+  else case addMetricPixel00 defect tree of
+         Just tree' => MkSymmetricMetricTensor (MkSquareMaxel tree')
+         Nothing    => MkSymmetricMetricTensor (MkSquareMaxel (addCellTree metricPixel00 defect tree))
 
 ------------------------------------------------------------------------
 -- 4. 10D CANONICAL TERM INSTANTIATION & GOH SPECTRUM
@@ -327,3 +345,41 @@ public export
 auditArbitraryDimensionBijections : Bool
 auditArbitraryDimensionBijections =
   all auditMetricIndexRoundTripDim (the (List Nat) [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+
+sameBoxTreeHeight : BoxMultisetTree Pixel -> BoxMultisetTree Pixel -> Bool
+sameBoxTreeHeight BoxLeaf BoxLeaf = True
+sameBoxTreeHeight (BoxNode h1 _ _ _ _) (BoxNode h2 _ _ _ _) = h1 == h2
+sameBoxTreeHeight _ _ = False
+
+updateLeftmostPixel00 : BoxInt -> BoxMultisetTree Pixel -> BoxMultisetTree Pixel
+updateLeftmostPixel00 defect BoxLeaf =
+  BoxNode 1 BoxLeaf metricPixel00 defect BoxLeaf
+updateLeftmostPixel00 defect node@(BoxNode h BoxLeaf (ConsCell (MkToken 0) (ConsCell (MkToken 0) ZeroCell)) w r) =
+  let newW = addBox w defect
+  in if boxIsZero newW
+       then addCellTree metricPixel00 defect node
+       else BoxNode h BoxLeaf metricPixel00 newW r
+updateLeftmostPixel00 defect (BoxNode h (BoxNode lh BoxLeaf (ConsCell (MkToken 0) (ConsCell (MkToken 0) ZeroCell)) lw lr) key w r) =
+  let newW = addBox lw defect
+  in if boxIsZero newW
+       then BoxNode h (addCellTree metricPixel00 defect (BoxNode lh BoxLeaf metricPixel00 lw lr)) key w r
+       else BoxNode h (BoxNode lh BoxLeaf metricPixel00 newW lr) key w r
+updateLeftmostPixel00 defect node@(BoxNode _ BoxLeaf _ _ _) =
+  addCellTree metricPixel00 defect node
+updateLeftmostPixel00 defect node@(BoxNode h l key@(ConsCell (MkToken kr) (ConsCell (MkToken kc) ZeroCell)) w r) =
+  if kr == 0 && kc == 0
+    then let newW = addBox w defect
+         in if boxIsZero newW then addCellTree metricPixel00 defect node else BoxNode h l metricPixel00 newW r
+    else let l' = updateLeftmostPixel00 defect l
+         in if sameBoxTreeHeight l' l
+              then BoxNode h l' key w r
+              else addCellTree metricPixel00 defect node
+updateLeftmostPixel00 defect node = addCellTree metricPixel00 defect node
+
+||| Zero-Maybe-box leftmost-spine perturbation of g_{00} by energy defect.
+public export
+perturbMetric00Direct : {dim : Nat} -> SymmetricMetricTensor dim -> BoxInt -> SymmetricMetricTensor dim
+perturbMetric00Direct m@(MkSymmetricMetricTensor (MkSquareMaxel tree)) defect =
+  if boxIsZero defect
+    then m
+    else MkSymmetricMetricTensor (MkSquareMaxel (updateLeftmostPixel00 defect tree))

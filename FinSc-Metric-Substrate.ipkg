@@ -30,5 +30,6 @@ modules = MetricSubstrate,
           Stage1.Topology.PersistenceStream,
           Stage1.PhysicalUniverse.Stratification,
           Stage1.SymmetricMetricTensor,
+          Stage1.Cosmology.UniverseBridge,
 
           Reflect.SubstrateAuditor

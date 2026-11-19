@@ -8,6 +8,7 @@ module Stage1.QuadStream
 import Stage0.BoxInt
 import Stage0.WitnessLedger
 import Stage0.Multiset
+import Stage1.MultisetTree
 import Stage0.OnSeq.FusedStream
 import Data.Fuel
 import Data.Vect
@@ -20,15 +21,15 @@ import Data.Vect
 
 ||| Quad-Stream Multiset Container bundling 3 manifest streams with 1 substrate law stream.
 public export
-record QuadStreamMultiset (a : Type) where
+record QuadStreamMultiset (k : Type) where
   constructor MkQuadStream
-  ellipticStream   : Multiset BoxInt a  -- Blue Manifest Stream (A_E, 27 states)
-  hyperbolicStream : Multiset BoxInt a  -- Red Relativistic Causal Stream (A_H, 128 states)
-  parabolicStream  : Multiset BoxInt a  -- Green Classical Dissipative Stream (A_P)
-  substrateStream  : Multiset BoxInt a  -- 4th Stream: Dark Matter Substrate Law Stream (55 states)
+  ellipticStream   : Carrier k  -- Blue Manifest Stream (A_E, 27 states)
+  hyperbolicStream : Carrier k  -- Red Relativistic Causal Stream (A_H, 128 states)
+  parabolicStream  : Carrier k  -- Green Classical Dissipative Stream (A_P)
+  substrateStream  : Carrier k  -- 4th Stream: Dark Matter Substrate Law Stream (55 states)
 
 public export
-(Eq a) => Eq (QuadStreamMultiset a) where
+(Eq k) => Eq (QuadStreamMultiset k) where
   (MkQuadStream e1 h1 p1 s1) == (MkQuadStream e2 h2 p2 s2) =
     e1 == e2 && h1 == h2 && p1 == p2 && s1 == s2
 
@@ -48,17 +49,17 @@ Eq QuadStreamChannel where
   SubstrateSector == SubstrateSector = True
   _ == _ = False
 
-||| Selects a specific channel multiset from a QuadStreamMultiset bundle.
+||| Selects a specific channel carrier from a QuadStreamMultiset bundle.
 public export
-getQuadChannel : QuadStreamChannel -> QuadStreamMultiset a -> Multiset BoxInt a
+getQuadChannel : QuadStreamChannel -> QuadStreamMultiset k -> Carrier k
 getQuadChannel EllipticSector   qs = qs.ellipticStream
 getQuadChannel HyperbolicSector qs = qs.hyperbolicStream
 getQuadChannel ParabolicSector  qs = qs.parabolicStream
 getQuadChannel SubstrateSector  qs = qs.substrateStream
 
-||| Updates a specific channel multiset inside a QuadStreamMultiset bundle.
+||| Updates a specific channel carrier inside a QuadStreamMultiset bundle.
 public export
-setQuadChannel : QuadStreamChannel -> Multiset BoxInt a -> QuadStreamMultiset a -> QuadStreamMultiset a
+setQuadChannel : QuadStreamChannel -> Carrier k -> QuadStreamMultiset k -> QuadStreamMultiset k
 setQuadChannel EllipticSector   m qs = { ellipticStream := m } qs
 setQuadChannel HyperbolicSector m qs = { hyperbolicStream := m } qs
 setQuadChannel ParabolicSector  m qs = { parabolicStream := m } qs
@@ -66,15 +67,15 @@ setQuadChannel SubstrateSector  m qs = { substrateStream := m } qs
 
 ||| Bidirectional Lens over QuadStreamMultiset sector.
 public export
-record QuadLens (a : Type) where
+record QuadLens (k : Type) where
   constructor MkQuadLens
   targetChannel : QuadStreamChannel
-  viewSector   : QuadStreamMultiset a -> Multiset BoxInt a
-  updateSector : Multiset BoxInt a -> QuadStreamMultiset a -> QuadStreamMultiset a
+  viewSector   : QuadStreamMultiset k -> Carrier k
+  updateSector : Carrier k -> QuadStreamMultiset k -> QuadStreamMultiset k
 
 ||| Creates a QuadLens targeting the specified channel.
 public export
-makeQuadLens : QuadStreamChannel -> QuadLens a
+makeQuadLens : QuadStreamChannel -> QuadLens k
 makeQuadLens ch = MkQuadLens ch (getQuadChannel ch) (setQuadChannel ch)
 
 ||| Pre-instantiated QuadLens targeting EllipticSector (27 states - 3D manifest space).
@@ -99,39 +100,39 @@ substrateLens = makeQuadLens SubstrateSector
 
 ||| Converts a 4-channel QuadStreamMultiset payload into a deforested FusedStream of channel-tagged entries.
 public export
-quadStreamToStream : QuadStreamMultiset a -> FusedStream (QuadStreamChannel, a, BoxInt)
+quadStreamToStream : QuadStreamMultiset k -> FusedStream (QuadStreamChannel, k, BoxInt)
 quadStreamToStream (MkQuadStream e h p s) =
-  let eStrm = mapStream (\(x, v) => (EllipticSector, x, v)) (multisetToStream e)
-      hStrm = mapStream (\(x, v) => (HyperbolicSector, x, v)) (multisetToStream h)
-      pStrm = mapStream (\(x, v) => (ParabolicSector, x, v)) (multisetToStream p)
-      sStrm = mapStream (\(x, v) => (SubstrateSector, x, v)) (multisetToStream s)
+  let eStrm = mapStream (\(x, v) => (EllipticSector, x, v)) (streamBoxMultisetTree e)
+      hStrm = mapStream (\(x, v) => (HyperbolicSector, x, v)) (streamBoxMultisetTree h)
+      pStrm = mapStream (\(x, v) => (ParabolicSector, x, v)) (streamBoxMultisetTree p)
+      sStrm = mapStream (\(x, v) => (SubstrateSector, x, v)) (streamBoxMultisetTree s)
   in eStrm <+> hStrm <+> pStrm <+> sStrm
 
 ||| Reconstructs a QuadStreamMultiset payload from a deforested stream using Fuel.
 public export
-streamToQuadStreamFuel : Eq a => Fuel -> FusedStream (QuadStreamChannel, a, BoxInt) -> QuadStreamMultiset a
+streamToQuadStreamFuel : DiscreteCoord k => Fuel -> FusedStream (QuadStreamChannel, k, BoxInt) -> QuadStreamMultiset k
 streamToQuadStreamFuel fuel strm =
   foldStreamFuel fuel (\qs, (ch, x, v) =>
     let lens = makeQuadLens ch
         currentMset = lens.viewSector qs
-        newMset = insertItemBox x v currentMset
+        newMset = currentMset <+> singletonCarrier x v
     in lens.updateSector newMset qs
-  ) (MkQuadStream ZeroM ZeroM ZeroM ZeroM) strm
+  ) (MkQuadStream neutral neutral neutral neutral) strm
 
 ||| Reconstructs a QuadStreamMultiset payload from a deforested stream using Nat fuel bound.
 public export
-streamToQuadStreamNat : Eq a => (fuel : Nat) -> FusedStream (QuadStreamChannel, a, BoxInt) -> QuadStreamMultiset a
+streamToQuadStreamNat : DiscreteCoord k => (fuel : Nat) -> FusedStream (QuadStreamChannel, k, BoxInt) -> QuadStreamMultiset k
 streamToQuadStreamNat fuel strm =
   foldStreamNat fuel (\qs, (ch, x, v) =>
     let lens = makeQuadLens ch
         currentMset = lens.viewSector qs
-        newMset = insertItemBox x v currentMset
+        newMset = currentMset <+> singletonCarrier x v
     in lens.updateSector newMset qs
-  ) (MkQuadStream ZeroM ZeroM ZeroM ZeroM) strm
+  ) (MkQuadStream neutral neutral neutral neutral) strm
 
 ||| Reconstructs a QuadStreamMultiset payload from a deforested stream with standard total fuel bound (1000).
 public export
-streamToQuadStream : Eq a => FusedStream (QuadStreamChannel, a, BoxInt) -> QuadStreamMultiset a
+streamToQuadStream : DiscreteCoord k => FusedStream (QuadStreamChannel, k, BoxInt) -> QuadStreamMultiset k
 streamToQuadStream = streamToQuadStreamNat 1000
 
 ||| Direct stream bundle of 4 distinct cosmological channel streams (Rule 04).
@@ -157,12 +158,12 @@ fusedBundleToTaggedStream (MkQuadStreamBundle e h p s) =
 
 ||| Calculates total integer mass aggregated across all 4 sectors of a QuadStreamMultiset payload.
 public export
-quadStreamTotalMass : QuadStreamMultiset BoxInt -> BoxInt
+quadStreamTotalMass : QuadStreamMultiset k -> BoxInt
 quadStreamTotalMass (MkQuadStream e h p s) =
-  multisetSum e + multisetSum h + multisetSum p + multisetSum s
+  totalMassBox e + totalMassBox h + totalMassBox p + totalMassBox s
 
 ||| Generates a QuadStreamMultiset payload directly from integer lattice coordinates (x, y)
-||| in O(1) registers, where each stream stores its respective quadrance as a multiset weight:
+||| in O(1) registers, where each carrier stores its respective quadrance at coordinate `1`:
 ||| - ellipticStream: Q_Blue = x^2 + y^2
 ||| - hyperbolicStream: Q_Red = x^2 - y^2
 ||| - parabolicStream: Q_Green = 2xy
@@ -174,10 +175,10 @@ quadStreamFromLattice x y =
       qr = (x * x) - (y * y)
       qg = intToBoxInt 2 * (x * y)
       qs = (x * x) + intToBoxInt 2 * (x * y)
-      eStream = AddM (intToBoxInt 1) qb ZeroM
-      hStream = AddM (intToBoxInt 1) qr ZeroM
-      pStream = AddM (intToBoxInt 1) qg ZeroM
-      sStream = AddM (intToBoxInt 1) qs ZeroM
+      eStream = singletonCarrier (intToBoxInt 1) qb
+      hStream = singletonCarrier (intToBoxInt 1) qr
+      pStream = singletonCarrier (intToBoxInt 1) qg
+      sStream = singletonCarrier (intToBoxInt 1) qs
   in MkQuadStream eStream hStream pStream sStream
 
 ||| Audits the 4-Geometry completion theorem over the lattice-generated QuadStreamMultiset:
@@ -186,10 +187,10 @@ public export
 auditQuadStreamLatticeCompletion : (x, y : BoxInt) -> Bool
 auditQuadStreamLatticeCompletion x y =
   let qs = quadStreamFromLattice x y
-      qb = multisetSum qs.ellipticStream
-      qr = multisetSum qs.hyperbolicStream
-      qg = multisetSum qs.parabolicStream
-      qsub = multisetSum qs.substrateStream
+      qb = totalMassBox qs.ellipticStream
+      qr = totalMassBox qs.hyperbolicStream
+      qg = totalMassBox qs.parabolicStream
+      qsub = totalMassBox qs.substrateStream
       lhs = intToBoxInt 2 * qsub
       rhs = qb + qr + intToBoxInt 2 * qg
   in lhs == rhs

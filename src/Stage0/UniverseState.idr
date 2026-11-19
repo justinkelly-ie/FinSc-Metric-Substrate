@@ -2,6 +2,8 @@ module Stage0.UniverseState
 
 import Data.Vect
 import Stage0.BoxInt
+import Stage0.HereditaryMSet
+import Stage0.OnSeq.FusedStream
 
 %default total
 
@@ -40,17 +42,17 @@ totalStateCapacity : {vm, de, dm : Nat} -> UniverseState vm de dm -> Nat
 totalStateCapacity {vm} {de} {dm} _ = vm + de + dm
 
 ||| Dimension projection for visible matter pool size.
-%inline public export
+public export
 visibleMatterCapacity : {vm, de, dm : Nat} -> UniverseState vm de dm -> Nat
 visibleMatterCapacity _ = vm
 
 ||| Dimension projection for dark energy pool size.
-%inline public export
+public export
 darkEnergyCapacity : {vm, de, dm : Nat} -> UniverseState vm de dm -> Nat
 darkEnergyCapacity _ = de
 
 ||| Dimension projection for dark matter residue pool size.
-%inline public export
+public export
 darkMatterCapacity : {vm, de, dm : Nat} -> UniverseState vm de dm -> Nat
 darkMatterCapacity _ = dm
 
@@ -95,3 +97,45 @@ stepUniverseLinear (MkUniverseState vm de dm) newMatter =
   let updatedVM = linearVectCombine vm newMatter
       updatedDM = (intToBoxInt 1) :: dm
   in MkUniverseState updatedVM de updatedDM
+
+------------------------------------------------------------------------
+-- 2. QTT `1` SINGLE LINEAR UNIVERSE CONTAINER (`UniverseContainer`)
+------------------------------------------------------------------------
+
+||| Outermost root universe wrapper enforcing single-owner `QTT 1` consumption
+||| over `HereditaryMSet BoxInt` (`PureMultiset`). Intentionally omits `Ord`
+||| (and `Eq`) so the root cosmos cannot be cloned, dropped, or embedded as a
+||| key inside another multiset container while internal patches remain freely
+||| observable via `Stage1.Views` inside scoped transitions.
+public export
+data UniverseContainer : Type where
+  MkUniverseContainer : (rootMSet : HereditaryMSet BoxInt) -> UniverseContainer
+
+||| Seeds the linear universe strictly from the empty vacuum `[]` (`emptyHMSet`).
+public export
+emptyUniverseContainer : UniverseContainer
+emptyUniverseContainer = MkUniverseContainer emptyHMSet
+
+||| Consumes a linear `UniverseContainer` explicitly to extract its final `PureMultiset` relic.
+public export
+consumeUniverseToMSet : (1 uc : UniverseContainer) -> HereditaryMSet BoxInt
+consumeUniverseToMSet (MkUniverseContainer rootMSet) = rootMSet
+
+||| Executes a read-only unrestricted observer query over the internal patch of a
+||| linearly threaded `UniverseContainer` without cloning or dropping the root.
+public export
+observeUniversePatch : (1 uc : UniverseContainer) ->
+                       (HereditaryMSet BoxInt -> out) ->
+                       LinearStatePair UniverseContainer out
+observeUniversePatch (MkUniverseContainer rootMSet) viewFn =
+  MkLStatePair (MkUniverseContainer rootMSet) (viewFn rootMSet)
+
+||| Evolves the linear `UniverseContainer` through a scoped transformation and
+||| returns an unrestricted observable alongside the updated `1`-quantity root.
+public export
+stepUniverseContainer : (1 uc : UniverseContainer) ->
+                        (HereditaryMSet BoxInt -> (HereditaryMSet BoxInt, out)) ->
+                        LinearStatePair UniverseContainer out
+stepUniverseContainer (MkUniverseContainer rootMSet) stepFn =
+  let (nextRoot, out) = stepFn rootMSet
+  in MkLStatePair (MkUniverseContainer nextRoot) out

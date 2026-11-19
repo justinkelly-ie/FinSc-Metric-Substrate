@@ -1,6 +1,7 @@
 module Stage1.FourGeometries
 
 import Stage0.BoxInt
+import Stage0.BoxNat
 import Stage0.Pixel
 import Stage0.StructuralFuel
 import Stage1.Basis.Coordinate
@@ -62,7 +63,7 @@ InvertibleScaleTransform ColorCharge Nat where
 public export
 cellColorSector : Fin 27 -> ColorCharge
 cellColorSector idx =
-  case (finToNat idx) `div` 9 of
+  case natDivFast (finToNat idx) 9 of
     0 => RedColor
     1 => GreenColor
     _ => BlueColor
@@ -80,12 +81,12 @@ data FundamentalGeometry =
   | SubstrateGeom
 
 ||| The carrier list of all 4 fundamental geometries (Elliptic, Hyperbolic, Parabolic, Substrate).
-%inline public export
+public export
 fundamentalGeometriesList : List FundamentalGeometry
 fundamentalGeometriesList = [EllipticGeom, HyperbolicGeom, ParabolicGeom, SubstrateGeom]
 
 ||| Fundamental geometry count (4), observed directly from the carrier list cardinality.
-%inline public export
+public export
 fundamentalGeometryCount : Nat
 fundamentalGeometryCount = length fundamentalGeometriesList
 
@@ -192,13 +193,13 @@ triangularNumber = Stage1.FourGeometries.triangularSum
 ------------------------------------------------------------------------
 
 ||| Fundamental color multiset carrier basis [RedColor, GreenColor, BlueColor].
-%inline public export
+public export
 colorBasisList : List ColorCharge
 colorBasisList = [RedColor, GreenColor, BlueColor]
 
 ||| Manifest spatial basis dimension L = 3 (T^3 spatial torus canvas),
 ||| grounded definitionally in the color charge multiset carrier cardinality.
-%inline public export
+public export
 manifestSpatialDim : Nat
 manifestSpatialDim = length colorBasisList
 
@@ -208,12 +209,12 @@ public export
 prfManifestSpatialDimGrounded = Refl
 
 ||| Elliptic 3D lattice state capacity: 3^3 = 27 states (Baryon/Visible Matter Canvas).
-%inline public export
+public export
 ellipticLatticeCapacity : Nat
 ellipticLatticeCapacity = powerNat manifestSpatialDim manifestSpatialDim
 
 ||| 2D Quark Color Slice Lattice Area (Tokens per Color Plane): 3^2 = 9.
-%inline public export
+public export
 sliceColorCapacity : Nat
 sliceColorCapacity = manifestSpatialDim * manifestSpatialDim
 
@@ -248,13 +249,13 @@ Show OctonionUnit where
   show E7 = "e7"
 
 ||| The 7-element imaginary octonionic basis carrier.
-%inline public export
+public export
 octonionBasisList : List OctonionUnit
 octonionBasisList = [E1, E2, E3, E4, E5, E6, E7]
 
 ||| Clifford / octonion generator degrees D = 7,
 ||| grounded in the octonion basis multiset cardinality.
-%inline public export
+public export
 cliffordGeneratorDim : Nat
 cliffordGeneratorDim = length octonionBasisList
 
@@ -264,7 +265,7 @@ public export
 prfCliffordGeneratorDimGrounded = Refl
 
 ||| Hyperbolic 2D law storage ROM capacity: 2^7 = 128 states (Dark Energy ROM).
-%inline public export
+public export
 hyperbolicRomCapacity : Nat
 hyperbolicRomCapacity = powerNat 2 cliffordGeneratorDim
 
@@ -287,12 +288,12 @@ Show SpacetimeBasis where
   show Space2 = "y"
   show Space3 = "z"
 
-%inline public export
+public export
 spacetimeBasisList : List SpacetimeBasis
 spacetimeBasisList = [Time0, Space1, Space2, Space3]
 
 ||| 4D spacetime basis dimension (4), observed directly from the spacetime basis carrier list.
-%inline public export
+public export
 spacetimeBasisDim : Nat
 spacetimeBasisDim = length spacetimeBasisList
 
@@ -328,12 +329,12 @@ Show ScaleBasis where
   show ScaleRed   = "s_Red"
   show ScaleGreen = "s_Green"
 
-%inline public export
+public export
 scaleBasisList : List ScaleBasis
 scaleBasisList = [ScaleBlue, ScaleRed, ScaleGreen]
 
 ||| 3-metric scale basis dimension (3), observed directly from the scale basis carrier list.
-%inline public export
+public export
 scaleBasisDim : Nat
 scaleBasisDim = length scaleBasisList
 
@@ -343,7 +344,7 @@ public export
 prfScaleBasisDimGrounded = Refl
 
 ||| 10D phase space basis dimension: direct sum of spacetime (4) + color (3) + scale (3) basis carriers.
-%inline public export
+public export
 phaseSpaceBasisDim : Nat
 phaseSpaceBasisDim = spacetimeBasisDim + manifestSpatialDim + scaleBasisDim
 
@@ -353,7 +354,7 @@ public export
 prfPhaseSpaceBasisDimGrounded = Refl
 
 ||| Parabolic 10D metric tensor component residue: T_10 = sum_{k=1}^10 k = 55 states (Dark Matter Dissipation Sink).
-%inline public export
+public export
 darkMatterTriangularResidue : Nat
 darkMatterTriangularResidue = Stage1.FourGeometries.triangularSum phaseSpaceBasisDim
 
@@ -363,7 +364,7 @@ primorial4 : Nat
 primorial4 = 2 * 3 * 5 * 7
 
 ||| Canonical Primorial 210 cosmic capacity budget: 27 + 128 + 55 = 210.
-%inline public export
+public export
 primorial210Budget : Nat
 primorial210Budget = ellipticLatticeCapacity + hyperbolicRomCapacity + darkMatterTriangularResidue
 

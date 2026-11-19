@@ -19,7 +19,7 @@ import Stage1.TypeTheory.Staging
 public export
 data BasisWeight = NegOne | Zero | PosOne
 
-%inline public export
+public export
 basisWeightEq : BasisWeight -> BasisWeight -> Bool
 basisWeightEq NegOne NegOne = True
 basisWeightEq Zero   Zero   = True
@@ -53,7 +53,7 @@ Show BasisWeight where
   show PosOne = "+1"
 
 ||| Converts a BasisWeight into its discrete BoxInt scalar value.
-%inline public export
+public export
 weightToBoxInt : BasisWeight -> BoxInt
 weightToBoxInt NegOne = MkBoxInt (-1)
 weightToBoxInt Zero   = MkBoxInt 0
@@ -67,7 +67,7 @@ weightToBoxInt PosOne = MkBoxInt 1
 ||| Instead of continuous tensor fields, the metric form is determined solely by token counts.
 public export
 MetricSignature : Type
-MetricSignature = Box BasisWeight
+MetricSignature = Carrier BasisWeight
 
 ||| Lookup of token multiplicity in the AVL MetricSignature.
 public export
@@ -75,7 +75,7 @@ lookupWeight : BasisWeight -> MetricSignature -> BoxInt
 lookupWeight target sig = lookupBox target sig
 
 ||| Counts the number of occurrences of a given BasisWeight in a MetricSignature.
-%inline public export
+public export
 countWeight : BasisWeight -> MetricSignature -> Nat
 countWeight w sig = boxToNat (lookupWeight w sig)
 
